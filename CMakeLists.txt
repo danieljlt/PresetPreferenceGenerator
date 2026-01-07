@@ -1,0 +1,101 @@
+cmake_minimum_required(VERSION 3.22)
+
+project(PresetPreferenceGenerator VERSION 1.0.0)
+
+# Set C++ standard
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Include CPM for dependency management
+include(cmake/CPM.cmake)
+
+# Add JUCE using CPM
+CPMAddPackage(
+    NAME JUCE
+    GITHUB_REPOSITORY juce-framework/JUCE
+    GIT_TAG 8.0.12
+    OPTIONS
+        "JUCE_BUILD_EXAMPLES OFF"
+        "JUCE_BUILD_EXTRAS OFF"
+)
+
+# Create the plugin target
+juce_add_plugin(PresetPreferenceGenerator
+    COMPANY_NAME "DanielLister"
+    IS_SYNTH TRUE
+    NEEDS_MIDI_INPUT TRUE
+    NEEDS_MIDI_OUTPUT FALSE
+    IS_MIDI_EFFECT FALSE
+    EDITOR_WANTS_KEYBOARD_FOCUS FALSE
+    COPY_PLUGIN_AFTER_BUILD TRUE
+    PLUGIN_MANUFACTURER_CODE Djls
+    PLUGIN_CODE Sam0
+    FORMATS AU VST3 Standalone
+    PRODUCT_NAME "PresetPreferenceGenerator"
+)
+
+# Add source files
+target_sources(PresetPreferenceGenerator
+    PRIVATE
+        # Main plugin files
+        Source/PluginProcessor.cpp
+        Source/PluginProcessor.h
+        Source/PluginEditor.cpp
+        Source/PluginEditor.h
+        
+        # JX11 synthesizer files
+        Source/JX11/Synth.cpp
+        Source/JX11/Synth.h
+        Source/JX11/Voice.h
+        Source/JX11/Oscillator.h
+        Source/JX11/Envelope.h
+        Source/JX11/Filter.h
+        Source/JX11/NoiseGenerator.h
+        Source/JX11/Preset.h
+        Source/JX11/Utils.h
+        
+        # Genetic Algorithm files
+        Source/GA/Individual.cpp
+        Source/GA/Individual.h
+        Source/GA/Population.cpp
+        Source/GA/Population.h
+        Source/GA/GeneticAlgorithm.cpp
+        Source/GA/GeneticAlgorithm.h
+        Source/GA/HeadlessSynth.cpp
+        Source/GA/HeadlessSynth.h
+        Source/GA/FeatureExtractor.cpp
+        Source/GA/FeatureExtractor.h
+        Source/GA/FitnessEvaluator.cpp
+        Source/GA/FitnessEvaluator.h
+        Source/GA/ParameterBridge.cpp
+        Source/GA/ParameterBridge.h
+        Source/GA/TargetAudioManager.cpp
+        Source/GA/TargetAudioManager.h
+        Source/GA/SelectionOperators.cpp
+        Source/GA/SelectionOperators.h
+        Source/GA/MutationOperators.cpp
+        Source/GA/MutationOperators.h
+        Source/GA/CrossoverOperators.cpp
+        Source/GA/CrossoverOperators.h
+)
+
+# Link JUCE modules
+target_link_libraries(PresetPreferenceGenerator
+    PRIVATE
+        juce::juce_audio_utils
+        juce::juce_audio_processors
+        juce::juce_audio_formats
+        juce::juce_dsp
+    PUBLIC
+        juce::juce_recommended_config_flags
+        juce::juce_recommended_lto_flags
+        juce::juce_recommended_warning_flags
+)
+
+# Compiler definitions
+target_compile_definitions(PresetPreferenceGenerator
+    PUBLIC
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
+        JUCE_VST3_CAN_REPLACE_VST2=0
+)
