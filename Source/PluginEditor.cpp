@@ -23,53 +23,7 @@ JX11AudioProcessorEditor::JX11AudioProcessorEditor (JX11AudioProcessor& p)
     gaLabel.setJustificationType(juce::Justification::centred);
     gaTab.addAndMakeVisible(gaLabel);
     
-    // Target file label
-    targetFileLabel.setText("No target loaded", juce::dontSendNotification);
-    targetFileLabel.setJustificationType(juce::Justification::centred);
-    targetFileLabel.setColour(juce::Label::backgroundColourId, juce::Colours::darkgrey);
-    targetFileLabel.setColour(juce::Label::textColourId, juce::Colours::white);
-    gaTab.addAndMakeVisible(targetFileLabel);
-    
-    // Load target button
-    loadTargetButton.setButtonText("Load Target Audio");
-    loadTargetButton.setColour(juce::TextButton::buttonColourId, juce::Colours::green);
-    loadTargetButton.onClick = [this]()
-    {
-        fileChooser = std::make_unique<juce::FileChooser>(
-            "Select target audio file",
-            juce::File::getSpecialLocation(juce::File::userHomeDirectory),
-            "*.wav;*.aiff;*.aif;*.mp3;*.flac;*.ogg;*.m4a");
-        
-        auto flags = juce::FileBrowserComponent::openMode 
-                   | juce::FileBrowserComponent::canSelectFiles;
-        
-        fileChooser->launchAsync(flags, [this](const juce::FileChooser& fc)
-        {
-            auto file = fc.getResult();
-            
-            if (file == juce::File{})
-                return;
-            
-            if (!file.existsAsFile())
-            {
-                targetFileLabel.setText("Error: File not found", juce::dontSendNotification);
-                return;
-            }
-            
-            bool success = audioProcessor.loadTargetAudio(file);
-            
-            if (success)
-            {
-                updateTargetLabel();
-                updateGAButtonState();
-            }
-            else
-            {
-                targetFileLabel.setText("Error: Could not load file", juce::dontSendNotification);
-            }
-        });
-    };
-    gaTab.addAndMakeVisible(loadTargetButton);
+    // Target UI setup removed
     
     gaStartStopButton.setButtonText("Start GA");
     gaStartStopButton.setColour(juce::TextButton::buttonColourId, juce::Colours::lightblue);
@@ -145,13 +99,7 @@ void JX11AudioProcessorEditor::resized()
     gaLabel.setBounds(gaBounds.removeFromTop(40));
     gaBounds.removeFromTop(10); // Spacing
     
-    // Target file label
-    targetFileLabel.setBounds(gaBounds.removeFromTop(30));
-    gaBounds.removeFromTop(10); // Spacing
-    
-    // Load target button
-    loadTargetButton.setBounds(gaBounds.removeFromTop(40).reduced(100, 0));
-    gaBounds.removeFromTop(20); // Spacing
+    // Target UI layout removed
     
     // Layout GA control buttons in a row
     auto buttonArea = gaBounds.removeFromTop(40);
@@ -193,9 +141,7 @@ void JX11AudioProcessorEditor::updateGAButtonState()
 {
     bool isRunning = audioProcessor.isGARunning();
     bool isPaused = audioProcessor.isGAPaused();
-    bool hasTarget = audioProcessor.hasTargetAudio();
-    
-    // Start/Stop button - only enabled if target is loaded
+    // Note: Start/Stop button logic simplified (always enabled if idle)
     if (isRunning) 
     {
         gaStartStopButton.setButtonText("Stop GA");
@@ -203,8 +149,8 @@ void JX11AudioProcessorEditor::updateGAButtonState()
     } 
     else 
     {
-        gaStartStopButton.setButtonText(hasTarget ? "Start GA" : "Start GA (Load Target First)");
-        gaStartStopButton.setEnabled(hasTarget);
+        gaStartStopButton.setButtonText("Start GA");
+        gaStartStopButton.setEnabled(true);
     }
     
     // Pause/Resume toggle button - only enabled when running
@@ -222,17 +168,4 @@ void JX11AudioProcessorEditor::updateGAButtonState()
     }
 }
 
-void JX11AudioProcessorEditor::updateTargetLabel()
-{
-    if (audioProcessor.hasTargetAudio())
-    {
-        juce::String filename = audioProcessor.getTargetFileName();
-        targetFileLabel.setText("Target: " + filename, juce::dontSendNotification);
-        targetFileLabel.setColour(juce::Label::backgroundColourId, juce::Colours::darkgreen);
-    }
-    else
-    {
-        targetFileLabel.setText("No target loaded", juce::dontSendNotification);
-        targetFileLabel.setColour(juce::Label::backgroundColourId, juce::Colours::darkgrey);
-    }
-}
+// updateTargetLabel removed

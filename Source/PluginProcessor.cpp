@@ -9,7 +9,7 @@
 #include "PluginEditor.h"
 #include "JX11/Utils.h"
 #include "GA/ParameterBridge.h"
-#include "GA/TargetAudioManager.h"
+// #include "GA/TargetAudioManager.h" // Removed
 
 //==============================================================================
 JX11AudioProcessor::JX11AudioProcessor()
@@ -56,7 +56,7 @@ JX11AudioProcessor::JX11AudioProcessor()
     setCurrentProgram(0);  // Load the default preset
     
     gaEngine = std::make_unique<GeneticAlgorithm>(); // Initialize GA engine
-    targetManager = std::make_unique<TargetAudioManager>(); // Initialize target audio manager
+    // targetManager = std::make_unique<TargetAudioManager>(); // Removed
     
     // Initialize parameter smoothing vectors (17 GA parameters)
     targetParameters.resize(17, 0.0f);
@@ -757,35 +757,7 @@ bool JX11AudioProcessor::isGAPaused() const
 //==============================================================================
 // Target Audio Management
 
-bool JX11AudioProcessor::loadTargetAudio(const juce::File& file)
-{
-    if (!targetManager || !gaEngine)
-        return false;
-    
-    // Load and preprocess audio file
-    auto result = targetManager->loadAndProcessAudioFile(file);
-    
-    if (!result.success)
-        return false;
-    
-    // Pass audio buffer to GA thread
-    gaEngine->setTargetAudio(result.audioBuffer);
-    
-    // Store filename for UI display
-    currentTargetFileName = file.getFileName();
-    
-    return true;
-}
-
-bool JX11AudioProcessor::hasTargetAudio() const
-{
-    return gaEngine ? gaEngine->hasTargetLoaded() : false;
-}
-
-juce::String JX11AudioProcessor::getTargetFileName() const
-{
-    return currentTargetFileName;
-}
+// Target methods removed
 
 //==============================================================================
 // Parameter Bridge Integration

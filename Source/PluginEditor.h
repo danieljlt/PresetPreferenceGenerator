@@ -37,19 +37,17 @@ private:
     juce::GenericAudioProcessorEditor genericEditor;
     juce::Component gaTab;
     juce::Label gaLabel;
-    juce::Label targetFileLabel;
-    juce::TextButton loadTargetButton;
+    // Target UI removed
     juce::TextButton gaStartStopButton;
     juce::TextButton gaPauseResumeButton;
     juce::Label fitnessLabel;
     
-    // File chooser (must be kept alive during async operation)
-    std::unique_ptr<juce::FileChooser> fileChooser;
+    // File chooser removed
     
     // Helper methods
     void logMessage(const juce::String& message);
     void updateGAButtonState();
-    void updateTargetLabel();
+    // updateTargetLabel removed
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (JX11AudioProcessorEditor)
 };

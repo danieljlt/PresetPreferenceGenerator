@@ -61,16 +61,8 @@ target_sources(PresetPreferenceGenerator
         Source/GA/Population.h
         Source/GA/GeneticAlgorithm.cpp
         Source/GA/GeneticAlgorithm.h
-        Source/GA/HeadlessSynth.cpp
-        Source/GA/HeadlessSynth.h
-        Source/GA/FeatureExtractor.cpp
-        Source/GA/FeatureExtractor.h
-        Source/GA/FitnessEvaluator.cpp
-        Source/GA/FitnessEvaluator.h
         Source/GA/ParameterBridge.cpp
         Source/GA/ParameterBridge.h
-        Source/GA/TargetAudioManager.cpp
-        Source/GA/TargetAudioManager.h
         Source/GA/SelectionOperators.cpp
         Source/GA/SelectionOperators.h
         Source/GA/MutationOperators.cpp

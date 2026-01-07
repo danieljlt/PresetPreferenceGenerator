@@ -130,10 +130,7 @@ public:
     bool isGARunning() const;
     bool isGAPaused() const;
     
-    // Target audio management
-    bool loadTargetAudio(const juce::File& file);
-    bool hasTargetAudio() const;
-    juce::String getTargetFileName() const;
+    // Target audio management removed
     
     // GA fitness display
     float getLastGAFitness() const { return lastGAFitness; }
@@ -173,8 +170,6 @@ private:
 
     Synth synth; // The core synthesizer engine
     std::unique_ptr<GeneticAlgorithm> gaEngine; // The genetic algorithm engine
-    std::unique_ptr<class TargetAudioManager> targetManager; // Target audio loader
-    juce::String currentTargetFileName; // Current target file name for UI display
     
     // Parameter smoothing for GA updates
     std::vector<float> targetParameters;   // Target from GA (18 floats, normalized [0,1])

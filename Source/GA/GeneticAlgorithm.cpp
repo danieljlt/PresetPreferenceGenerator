@@ -10,9 +10,6 @@
 
 #include "GeneticAlgorithm.h"
 #include "Population.h"
-#include "HeadlessSynth.h"
-#include "FeatureExtractor.h"
-#include "FitnessEvaluator.h"
 #include "ParameterBridge.h"
 #include "Individual.h"
 #include "SelectionOperators.h"
@@ -28,12 +25,6 @@ GeneticAlgorithm::GeneticAlgorithm() : juce::Thread("GeneticAlgorithm")
     
     // Set default fitness tolerance (2% worse allowed)
     parameterBridge->setFitnessTolerance(0.02f);
-    
-    // Initialize feature extractor for 44.1kHz
-    featureExtractor = std::make_unique<FeatureExtractor>(44100.0);
-    
-    // Initialize headless synth for rendering
-    headlessSynth = std::make_unique<HeadlessSynth>(44100.0, 512);
 }
 
 GeneticAlgorithm::~GeneticAlgorithm()
@@ -94,47 +85,6 @@ void GeneticAlgorithm::resumeGA()
     }
 }
 
-void GeneticAlgorithm::setTargetAudio(const juce::AudioBuffer<float>& audioBuffer)
-{
-    // Called from UI thread - store pending target for GA thread to pick up
-    std::lock_guard<std::mutex> lock(targetUpdateMutex);
-    pendingTargetAudio = audioBuffer;  // Deep copy
-    hasTarget.store(true);  // Set flag immediately so UI knows we have a target
-}
-
-void GeneticAlgorithm::checkForTargetUpdate()
-{
-    // Called from GA thread - check if new target is available
-    std::unique_lock<std::mutex> lock(targetUpdateMutex);
-    
-    if (!pendingTargetAudio.has_value())
-        return;
-    
-    // Extract the pending audio and clear it
-    juce::AudioBuffer<float> targetAudio = std::move(pendingTargetAudio.value());
-    pendingTargetAudio.reset();
-    lock.unlock();  // Release lock before processing
-    
-    // Extract features from target audio (on GA thread)
-    FeatureVector targetFeatures = featureExtractor->extractFeatures(targetAudio);
-    
-    // Store audio length for rendering
-    targetAudioLength = targetAudio.getNumSamples();
-    
-    // Create or update fitness evaluator
-    if (fitnessEvaluator == nullptr)
-    {
-        fitnessEvaluator = std::make_unique<FitnessEvaluator>(targetFeatures);
-    }
-    else
-    {
-        fitnessEvaluator->setTarget(targetFeatures);
-    }
-    
-    // Mark that we now have a target
-    hasTarget.store(true);
-}
-
 void GeneticAlgorithm::initializePopulation()
 {
     // Create population with configured size and parameter count
@@ -164,24 +114,9 @@ void GeneticAlgorithm::initializePopulation()
 
 float GeneticAlgorithm::evaluateIndividual(const Individual& individual)
 {
-    // Set synth parameters from individual
-    headlessSynth->setParameters(individual.getParameters());
-    
-    // Render audio with target length
-    juce::AudioBuffer<float> renderedAudio = headlessSynth->renderNote(
-        MIDI_NOTE, 
-        VELOCITY, 
-        targetAudioLength, 
-        NOTE_ON_DURATION
-    );
-    
-    // Extract features from rendered audio
-    FeatureVector candidateFeatures = featureExtractor->extractFeatures(renderedAudio);
-    
-    // Compute fitness using evaluator
-    float fitness = fitnessEvaluator->computeFitness(candidateFeatures);
-    
-    return fitness;
+    // Dummy fitness function for now
+    // Returns a random value between 0.0 and 1.0
+    return rng.nextFloat();
 }
 
 void GeneticAlgorithm::run()
@@ -189,9 +124,6 @@ void GeneticAlgorithm::run()
     // Main GA loop - this is called by JUCE's thread system
     while (!threadShouldExit()) 
     {
-        // Check for new target audio first
-        checkForTargetUpdate();
-        
         // Handle pause state using JUCE's WaitableEvent
         if (paused.load()) 
         {
@@ -203,13 +135,6 @@ void GeneticAlgorithm::run()
         if (threadShouldExit()) 
         {
             break;
-        }
-        
-        // Only run GA if we have a target loaded
-        if (!hasTarget.load())
-        {
-            juce::Thread::sleep(100);
-            continue;
         }
         
         // Initialize population on first iteration
@@ -343,6 +268,9 @@ void GeneticAlgorithm::run()
         {
             bestFitnessSoFar = currentBestFitness;
         }
+        
+        // Small sleep to prevent tight loop if not much work is happening
+         juce::Thread::sleep(10);
     }
 }
 
