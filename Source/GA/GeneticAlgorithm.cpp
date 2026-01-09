@@ -15,6 +15,7 @@
 #include "SelectionOperators.h"
 #include "CrossoverOperators.h"
 #include "MutationOperators.h"
+#include "DummyFitnessModel.h"
 #include <algorithm>
 #include <vector>
 
@@ -22,6 +23,9 @@ GeneticAlgorithm::GeneticAlgorithm() : juce::Thread("GeneticAlgorithm")
 {
     // Initialize parameter bridge with default queue capacity of 32
     parameterBridge = std::make_unique<ParameterBridge>(32);
+    
+    // Initialize dummy fitness model with a seed
+    fitnessModel = std::make_unique<DummyFitnessModel>(12345);
     
     // Set default fitness tolerance (2% worse allowed)
     parameterBridge->setFitnessTolerance(0.02f);
@@ -114,9 +118,19 @@ void GeneticAlgorithm::initializePopulation()
 
 float GeneticAlgorithm::evaluateIndividual(const Individual& individual)
 {
-    // Dummy fitness function for now
-    // Returns a random value between 0.0 and 1.0
-    return rng.nextFloat();
+    if (fitnessModel != nullptr)
+    {
+        return fitnessModel->evaluate(individual.getParameters());
+    }
+    
+    // Fallback if no model (shouldn't happen)
+    return 0.0f;
+}
+
+void GeneticAlgorithm::debugDumpQueue()
+{
+    if (parameterBridge)
+        parameterBridge->debugLogQueueContents();
 }
 
 void GeneticAlgorithm::run()
@@ -249,24 +263,29 @@ void GeneticAlgorithm::run()
         }
         
         // ====================================================================
-        // PARAMETER BRIDGE UPDATE: Send best individual if within tolerance
+        // PARAMETER BRIDGE UPDATE: Push Best Offspring
         // ====================================================================
         
-        float currentBestFitness = population->getBestFitness();
-        float tolerance = parameterBridge->getFitnessTolerance();
-        
-        // Push if better OR within tolerance threshold (allows slightly worse solutions)
-        // Tolerance of 0.02 means accept up to 2% worse than best so far
-        if (currentBestFitness >= bestFitnessSoFar * (1.0f - tolerance))
+        // Push the best *new* individual from this generation to ensure diversity.
+        // If we only push the population best, we get duplicates until a new best is found.
+        if (!offspring.empty())
         {
-            Individual& best = population->getBest();
-            parameterBridge->push(best.getParameters(), best.getFitness());
+            auto bestOffspringIt = std::max_element(offspring.begin(), offspring.end(),
+                [](const Individual& a, const Individual& b) { return a.getFitness() < b.getFitness(); });
+                
+            if (bestOffspringIt != offspring.end())
+            {
+                parameterBridge->push(bestOffspringIt->getParameters(), bestOffspringIt->getFitness());
+            }
         }
-        
-        // Update best fitness if improved
-        if (currentBestFitness > bestFitnessSoFar)
+
+        // Update stats (best global fitness)
+        Individual& globalBest = population->getBest();
+
+        // Update best fitness tracker
+        if (globalBest.getFitness() > bestFitnessSoFar)
         {
-            bestFitnessSoFar = currentBestFitness;
+            bestFitnessSoFar = globalBest.getFitness();
         }
         
         // Small sleep to prevent tight loop if not much work is happening

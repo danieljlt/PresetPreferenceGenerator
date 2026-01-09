@@ -20,7 +20,7 @@ const int NUM_PARAMS = 26;
 
 struct Preset {
     // Constructor to initialize a preset with a name and 26 parameter values
-    Preset(const char* name,
+    Preset(const char* presetName,
            float p0, float p1, float p2, float p3,
            float p4, float p5, float p6, float p7,
            float p8, float p9, float p10, float p11,
@@ -30,7 +30,7 @@ struct Preset {
            float p24, float p25)
     {
         // Copy the preset name (assumes it fits in 40 chars)
-        strcpy(this->name, name);
+        strcpy(this->name, presetName);
 
         // Store all 26 parameters in order
         param[0]  = p0;   // Osc Mix

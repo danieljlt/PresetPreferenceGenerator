@@ -1,0 +1,8 @@
+# Ignore everything
+*
+
+# Exceptions (Whitelist)
+!Source/
+!cmake/
+!CMakeLists.txt
+!.gitignore

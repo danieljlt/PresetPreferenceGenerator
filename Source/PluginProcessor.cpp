@@ -9,7 +9,6 @@
 #include "PluginEditor.h"
 #include "JX11/Utils.h"
 #include "GA/ParameterBridge.h"
-// #include "GA/TargetAudioManager.h" // Removed
 
 //==============================================================================
 JX11AudioProcessor::JX11AudioProcessor()
@@ -56,7 +55,6 @@ JX11AudioProcessor::JX11AudioProcessor()
     setCurrentProgram(0);  // Load the default preset
     
     gaEngine = std::make_unique<GeneticAlgorithm>(); // Initialize GA engine
-    // targetManager = std::make_unique<TargetAudioManager>(); // Removed
     
     // Initialize parameter smoothing vectors (17 GA parameters)
     targetParameters.resize(17, 0.0f);
@@ -722,8 +720,17 @@ juce::AudioProcessorValueTreeState::ParameterLayout JX11AudioProcessor::createPa
 
 void JX11AudioProcessor::startGA()
 {
+    // Reset fitness tracker
+    lastGAFitness = 0.0f;
+    
     if (gaEngine)
+    {
+        // Clear any old candidates from previous runs
+        if (auto* bridge = gaEngine->getParameterBridge())
+            bridge->clear();
+            
         gaEngine->startGA();
+    }
 }
 
 void JX11AudioProcessor::stopGA()
@@ -754,10 +761,11 @@ bool JX11AudioProcessor::isGAPaused() const
     return gaEngine ? gaEngine->isGAPaused() : false;
 }
 
-//==============================================================================
-// Target Audio Management
-
-// Target methods removed
+void JX11AudioProcessor::debugLogQueue()
+{
+    if (gaEngine)
+        gaEngine->debugDumpQueue();
+}
 
 //==============================================================================
 // Parameter Bridge Integration
@@ -766,24 +774,40 @@ void JX11AudioProcessor::timerCallback()
 {
     if (!gaEngine || !gaEngine->getParameterBridge())
         return;
-    
-    // Check for new parameters from GA
-    std::vector<float> params;
-    float fitness;
-    
-    // Consume all available updates (keep only the latest)
-    while (gaEngine->getParameterBridge()->pop(params, fitness))
-    {
-        targetParameters = params;
-        hasTargetParameters = true;
-        lastGAFitness = fitness;
-    }
-    
+             
     // Gradually interpolate toward target
     if (hasTargetParameters)
     {
         interpolateAndApplyParameters();
     }
+}
+
+bool JX11AudioProcessor::fetchNextPreset()
+{
+    if (!gaEngine || !gaEngine->getParameterBridge())
+        return false;
+        
+    std::vector<float> params;
+    float fitness;
+    
+    // Pop a single solution from the queue
+    if (gaEngine->getParameterBridge()->pop(params, fitness))
+    {
+        targetParameters = params;
+        hasTargetParameters = true;
+        lastGAFitness = fitness;
+        return true;
+    }
+    
+    return false;
+}
+
+int JX11AudioProcessor::getNumCandidatesAvailable() const
+{
+    if (!gaEngine || !gaEngine->getParameterBridge())
+        return 0;
+        
+    return gaEngine->getParameterBridge()->getNumAvailable();
 }
 
 void JX11AudioProcessor::interpolateAndApplyParameters()

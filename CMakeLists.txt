@@ -69,6 +69,11 @@ target_sources(PresetPreferenceGenerator
         Source/GA/MutationOperators.h
         Source/GA/CrossoverOperators.cpp
         Source/GA/CrossoverOperators.h
+        
+        # Fitness Model
+        Source/GA/IFitnessModel.h
+        Source/GA/DummyFitnessModel.cpp
+        Source/GA/DummyFitnessModel.h
 )
 
 # Link JUCE modules

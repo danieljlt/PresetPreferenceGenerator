@@ -9,6 +9,7 @@
 */
 
 #include "ParameterBridge.h"
+#include <iostream>
 
 ParameterBridge::ParameterBridge(int queueCapacity)
     : fifo(queueCapacity), buffer(static_cast<size_t>(queueCapacity))
@@ -84,3 +85,60 @@ void ParameterBridge::clear()
     fifo.reset();
 }
 
+void ParameterBridge::debugLogQueueContents() const
+{
+    // Log to a file on the Desktop for easy viewing
+    auto logFile = juce::File::getSpecialLocation(juce::File::userDesktopDirectory)
+                   .getChildFile("GA_Debug_Log.txt");
+    
+    juce::String outputBuffer;
+    juce::String nl = juce::NewLine::getDefault();
+    
+    int numReady = fifo.getNumReady();
+    if (numReady == 0)
+    {
+        outputBuffer = "Queue is empty." + nl;
+        logFile.appendText(outputBuffer);
+        DBG(outputBuffer);
+        return;
+    }
+    
+    // We need to const_cast the fifo to use prepareToRead, but we won't consume.
+    auto& nonConstFifo = const_cast<juce::AbstractFifo&>(fifo);
+    
+    int start1, size1, start2, size2;
+    nonConstFifo.prepareToRead(numReady, start1, size1, start2, size2);
+    
+    outputBuffer << "--- Queue Dump (" << numReady << " items) ---" << nl;
+    
+    auto logItem = [&](int index)
+    {
+        const auto& item = buffer[static_cast<size_t>(index)];
+        juce::String s;
+        s << "Fit: " << juce::String(item.fitness, 4) << " |Params: ";
+        // Print first 5 params as signature
+        for(int i=0; i<std::min(5, (int)item.parameters.size()); ++i)
+            s << juce::String(item.parameters[i], 2) << " ";
+        s << nl;
+        outputBuffer += s;
+    };
+    
+    if (size1 > 0)
+    {
+        for (int i = 0; i < size1; ++i)
+            logItem(start1 + i);
+    }
+    if (size2 > 0)
+    {
+        for (int i = 0; i < size2; ++i)
+            logItem(start2 + i);
+    }
+    
+    outputBuffer << "-----------------------------" << nl << nl;
+    
+    // Write everything to file at once (append mode)
+    logFile.appendText(outputBuffer);
+    
+    // Also log to debug output just in case
+    DBG(outputBuffer);
+}

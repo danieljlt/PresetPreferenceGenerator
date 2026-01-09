@@ -18,7 +18,6 @@
 class ParameterBridge
 {
 public:
-    // Constructor - sets up the queue with specified capacity
     explicit ParameterBridge(int queueCapacity = 32);
     
     // Push a parameter set from GA thread (producer)
@@ -37,6 +36,9 @@ public:
     
     // Clear all pending updates
     void clear();
+    
+    // Debug: print all queued items to console
+    void debugLogQueueContents() const;
     
     // Set/get fitness tolerance (0.02 = allow 2% worse fitness)
     void setFitnessTolerance(float tolerance) { fitnessTolerance.store(tolerance); }

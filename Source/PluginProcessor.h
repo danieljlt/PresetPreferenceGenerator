@@ -130,10 +130,18 @@ public:
     bool isGARunning() const;
     bool isGAPaused() const;
     
-    // Target audio management removed
-    
     // GA fitness display
     float getLastGAFitness() const { return lastGAFitness; }
+
+    // Manual preset fetching (called from UI)
+    bool fetchNextPreset();
+    int getNumCandidatesAvailable() const;
+    
+    // Debug: Get current smoothed parameters
+    const std::vector<float>& getCurrentGAParameters() const { return targetParameters; }
+    
+    // Debug: Print queue to console
+    void debugLogQueue();
 
 private:
     // Timer callback - polls parameter bridge and applies smoothed updates
