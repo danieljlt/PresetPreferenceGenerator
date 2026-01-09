@@ -14,6 +14,7 @@
 #include "JX11/Synth.h"
 #include "JX11/Preset.h"
 #include "GA/GeneticAlgorithm.h"
+#include "GA/IFitnessModel.h"
 
 // Namespace containing string identifiers for all plugin parameters,
 // each with a version number (used for state compatibility).
@@ -142,11 +143,17 @@ public:
     
     // Debug: Print queue to console
     void debugLogQueue();
+    
+    // Feedback mechanism
+    void logFeedback(const IFitnessModel::Feedback& feedback);
 
 private:
     // Timer callback - polls parameter bridge and applies smoothed updates
     void timerCallback() override;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (JX11AudioProcessor)
+    
+    // Fitness model (owned by Processor)
+    std::unique_ptr<IFitnessModel> fitnessModel;
 
     // Splits the audio buffer based on incoming MIDI events
     void splitBufferByEvents(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages);

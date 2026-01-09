@@ -26,7 +26,7 @@ class IFitnessModel;
 class GeneticAlgorithm : public juce::Thread
 {
 public:
-    GeneticAlgorithm();
+    explicit GeneticAlgorithm(IFitnessModel& model);
     ~GeneticAlgorithm() override;
     
     void startGA();
@@ -72,7 +72,7 @@ private:
     float evaluateIndividual(const Individual& individual);
     
     // Fitness Model
-    std::unique_ptr<IFitnessModel> fitnessModel;
+    IFitnessModel& fitnessModel;
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GeneticAlgorithm)
 };

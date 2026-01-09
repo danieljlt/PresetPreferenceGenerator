@@ -15,17 +15,15 @@
 #include "SelectionOperators.h"
 #include "CrossoverOperators.h"
 #include "MutationOperators.h"
-#include "DummyFitnessModel.h"
+#include "IFitnessModel.h"
 #include <algorithm>
 #include <vector>
 
-GeneticAlgorithm::GeneticAlgorithm() : juce::Thread("GeneticAlgorithm")
+GeneticAlgorithm::GeneticAlgorithm(IFitnessModel& model) 
+    : juce::Thread("GeneticAlgorithm"), fitnessModel(model)
 {
     // Initialize parameter bridge with default queue capacity of 32
     parameterBridge = std::make_unique<ParameterBridge>(32);
-    
-    // Initialize dummy fitness model with a seed
-    fitnessModel = std::make_unique<DummyFitnessModel>(12345);
     
     // Set default fitness tolerance (2% worse allowed)
     parameterBridge->setFitnessTolerance(0.02f);
@@ -118,10 +116,7 @@ void GeneticAlgorithm::initializePopulation()
 
 float GeneticAlgorithm::evaluateIndividual(const Individual& individual)
 {
-    if (fitnessModel != nullptr)
-    {
-        return fitnessModel->evaluate(individual.getParameters());
-    }
+    return fitnessModel.evaluate(individual.getParameters());
     
     // Fallback if no model (shouldn't happen)
     return 0.0f;
@@ -266,7 +261,7 @@ void GeneticAlgorithm::run()
         // PARAMETER BRIDGE UPDATE: Push Best Offspring
         // ====================================================================
         
-        // Push the best *new* individual from this generation to ensure diversity.
+        // Push the best new individual from this generation to ensure diversity.
         // If we only push the population best, we get duplicates until a new best is found.
         if (!offspring.empty())
         {

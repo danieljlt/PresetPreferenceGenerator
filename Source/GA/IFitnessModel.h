@@ -18,6 +18,15 @@ public:
     virtual ~IFitnessModel() = default;
 
     /**
+     * Structure to hold user feedback.
+     */
+    struct Feedback
+    {
+        float rating; // 0.0 (Dislike) or 1.0 (Like)
+        // Future extensions: playTimeSeconds, tags, etc.
+    };
+
+    /**
      * Evaluates a genome and returns a fitness score.
      * @param genome The parameter vector to evaluate.
      * @return Fitness value (typically 0.0 to 1.0).
@@ -25,8 +34,9 @@ public:
     virtual float evaluate(const std::vector<float>& genome) = 0;
 
     /**
-     * Trigger feedback mechanism (e.g. logging, model training).
-     * Currently a placeholder for future MLP integration.
+     * Trigger feedback mechanism.
+     * @param genome The genome the feedback applies to.
+     * @param feedback The feedback data.
      */
-    virtual void sendFeedback() = 0;
+    virtual void sendFeedback(const std::vector<float>& genome, const Feedback& feedback) = 0;
 };

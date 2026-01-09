@@ -87,10 +87,6 @@ void ParameterBridge::clear()
 
 void ParameterBridge::debugLogQueueContents() const
 {
-    // Log to a file on the Desktop for easy viewing
-    auto logFile = juce::File::getSpecialLocation(juce::File::userDesktopDirectory)
-                   .getChildFile("GA_Debug_Log.txt");
-    
     juce::String outputBuffer;
     juce::String nl = juce::NewLine::getDefault();
     
@@ -98,7 +94,6 @@ void ParameterBridge::debugLogQueueContents() const
     if (numReady == 0)
     {
         outputBuffer = "Queue is empty." + nl;
-        logFile.appendText(outputBuffer);
         DBG(outputBuffer);
         return;
     }
@@ -136,9 +131,6 @@ void ParameterBridge::debugLogQueueContents() const
     
     outputBuffer << "-----------------------------" << nl << nl;
     
-    // Write everything to file at once (append mode)
-    logFile.appendText(outputBuffer);
-    
-    // Also log to debug output just in case
+    // Log to standard debug output
     DBG(outputBuffer);
 }

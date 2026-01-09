@@ -62,22 +62,35 @@ JX11AudioProcessorEditor::JX11AudioProcessorEditor (JX11AudioProcessor& p)
     fitnessLabel.setColour(juce::Label::textColourId, juce::Colours::white);
     gaTab.addAndMakeVisible(fitnessLabel);
     
-    // Candidates "Next Preset" button
-    nextPresetButton.setButtonText("Next Preset");
-    nextPresetButton.setColour(juce::TextButton::buttonColourId, juce::Colours::limegreen);
-    nextPresetButton.onClick = [this]()
+    // Like Button
+    likeButton.setButtonText("Like");
+    likeButton.setColour(juce::TextButton::buttonColourId, juce::Colours::limegreen);
+    likeButton.onClick = [this]()
     {
+        // 1.0 Rating = Like
+        audioProcessor.logFeedback({1.0f});
+        
         if (audioProcessor.fetchNextPreset())
         {
-           // Success. Also dump the queue for debugging.
            audioProcessor.debugLogQueue();
         }
-        else
+    };
+    gaTab.addAndMakeVisible(likeButton);
+
+    // Dislike Button
+    dislikeButton.setButtonText("Dislike");
+    dislikeButton.setColour(juce::TextButton::buttonColourId, juce::Colours::red);
+    dislikeButton.onClick = [this]()
+    {
+        // 0.0 Rating = Dislike
+        audioProcessor.logFeedback({0.0f});
+        
+        if (audioProcessor.fetchNextPreset())
         {
-            // Optional: Indicate no preset available (could flash red)
+           audioProcessor.debugLogQueue();
         }
     };
-    gaTab.addAndMakeVisible(nextPresetButton);
+    gaTab.addAndMakeVisible(dislikeButton);
     
     // Candidates count label
     candidatesLabel.setText("Candidates: 0", juce::dontSendNotification);
@@ -87,7 +100,6 @@ JX11AudioProcessorEditor::JX11AudioProcessorEditor (JX11AudioProcessor& p)
     // Debug parameters label
     debugParamsLabel.setText("Params: --", juce::dontSendNotification);
     debugParamsLabel.setJustificationType(juce::Justification::centredTop);
-    // Debug dump button removed (integrated into Next Preset)
     
     // Add tabs
     tabbedComponent.addTab("Synth Controls", juce::Colours::lightgrey, &genericEditor, false);
@@ -142,7 +154,10 @@ void JX11AudioProcessorEditor::resized()
     // Candidates area
     gaBounds.removeFromTop(20); // Spacing
     candidatesLabel.setBounds(gaBounds.removeFromTop(25));
-    nextPresetButton.setBounds(gaBounds.removeFromTop(40).reduced(20, 0));
+    auto feedbackArea = gaBounds.removeFromTop(40).reduced(20, 0);
+    int feedbackButtonWidth = feedbackArea.getWidth() / 2;
+    dislikeButton.setBounds(feedbackArea.removeFromLeft(feedbackButtonWidth).reduced(5, 0));
+    likeButton.setBounds(feedbackArea.removeFromLeft(feedbackButtonWidth).reduced(5, 0));
     
     // Debug params area
     gaBounds.removeFromTop(10);
@@ -161,8 +176,9 @@ void JX11AudioProcessorEditor::timerCallback()
     int candidates = audioProcessor.getNumCandidatesAvailable();
     candidatesLabel.setText("Candidates: " + juce::String(candidates), juce::dontSendNotification);
     
-    // Enable "Next" button only if candidates are available
-    nextPresetButton.setEnabled(candidates > 0);
+    // Enable Feedback buttons only if candidates are available
+    likeButton.setEnabled(candidates > 0);
+    dislikeButton.setEnabled(candidates > 0);
     
     // Update debug parameters display
     const auto& params = audioProcessor.getCurrentGAParameters();

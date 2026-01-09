@@ -9,6 +9,7 @@
 #include "PluginEditor.h"
 #include "JX11/Utils.h"
 #include "GA/ParameterBridge.h"
+#include "GA/DummyFitnessModel.h"
 
 //==============================================================================
 JX11AudioProcessor::JX11AudioProcessor()
@@ -54,7 +55,11 @@ JX11AudioProcessor::JX11AudioProcessor()
     createPrograms();      // Populate preset list
     setCurrentProgram(0);  // Load the default preset
     
-    gaEngine = std::make_unique<GeneticAlgorithm>(); // Initialize GA engine
+    // Initialize fitness model
+    fitnessModel = std::make_unique<DummyFitnessModel>(12345);
+    
+    // Initialize GA engine with reference to fitness model
+    gaEngine = std::make_unique<GeneticAlgorithm>(*fitnessModel);
     
     // Initialize parameter smoothing vectors (17 GA parameters)
     targetParameters.resize(17, 0.0f);
@@ -154,6 +159,7 @@ void JX11AudioProcessor::changeProgramName (int, const juce::String&)
 
 void JX11AudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
+    DBG("Plugin loaded and DBG active");
     synth.allocateResources(sampleRate, samplesPerBlock);
     parametersChanged.store(true); // Mark for update on next block
     reset();
@@ -765,6 +771,20 @@ void JX11AudioProcessor::debugLogQueue()
 {
     if (gaEngine)
         gaEngine->debugDumpQueue();
+}
+
+void JX11AudioProcessor::logFeedback(const IFitnessModel::Feedback& feedback)
+{
+    if (fitnessModel)
+    {
+        // Use current parameters (targetParameters) as the genome for feedback
+        // Note: In real usage, we might want to ensure these params match what the user heard.
+        // For now, assuming user rates the currently loaded target parameters.
+        if (hasTargetParameters)
+        {
+             fitnessModel->sendFeedback(targetParameters, feedback);
+        }
+    }
 }
 
 //==============================================================================

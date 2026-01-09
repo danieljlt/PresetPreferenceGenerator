@@ -26,8 +26,16 @@ public:
     explicit DummyFitnessModel(int seed = 0);
 
     float evaluate(const std::vector<float>& genome) override;
-    void sendFeedback() override;
+    void sendFeedback(const std::vector<float>& genome, const Feedback& feedback) override;
+    
+    struct TrainingData {
+        std::vector<float> genome;
+        Feedback feedback;
+    };
+    
+    const std::vector<TrainingData>& getStoredFeedback() const { return storedFeedback; }
 
 private:
+    std::vector<TrainingData> storedFeedback;
     juce::Random rng;
 };

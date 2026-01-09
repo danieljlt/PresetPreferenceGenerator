@@ -41,7 +41,8 @@ private:
     juce::TextButton gaPauseResumeButton;
     juce::Label fitnessLabel;
  
-    juce::TextButton nextPresetButton;
+    juce::TextButton likeButton;
+    juce::TextButton dislikeButton;
     juce::Label candidatesLabel;
     juce::Label debugParamsLabel; // Debug: show current parameter values
     

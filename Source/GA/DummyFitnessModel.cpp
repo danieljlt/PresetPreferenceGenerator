@@ -19,7 +19,10 @@ float DummyFitnessModel::evaluate(const std::vector<float>& /*genome*/)
     return rng.nextFloat();
 }
 
-void DummyFitnessModel::sendFeedback()
+void DummyFitnessModel::sendFeedback(const std::vector<float>& genome, const Feedback& feedback)
 {
-    // Placeholder for now
+    // Store the feedback for future training
+    storedFeedback.push_back({genome, feedback});
+    
+    DBG("DummyFitnessModel: Stored feedback. Rating: " << feedback.rating << ". Total examples: " << storedFeedback.size());
 }
