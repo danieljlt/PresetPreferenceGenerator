@@ -16,7 +16,7 @@ CPMAddPackage(
     GIT_TAG 8.0.12
     OPTIONS
         "JUCE_BUILD_EXAMPLES OFF"
-        "JUCE_BUILD_EXTRAS OFF"
+        "JUCE_BUILD_EXTRAS ON"
 )
 
 # Create the plugin target
@@ -74,6 +74,8 @@ target_sources(PresetPreferenceGenerator
         Source/GA/IFitnessModel.h
         Source/GA/DummyFitnessModel.cpp
         Source/GA/DummyFitnessModel.h
+        Source/GA/PreferenceModel.cpp
+        Source/GA/PreferenceModel.h
 )
 
 # Link JUCE modules

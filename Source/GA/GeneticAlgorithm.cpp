@@ -149,6 +149,7 @@ void GeneticAlgorithm::run()
         // Initialize population on first iteration
         if (!populationInitialized)
         {
+            DBG("Initializing population");
             initializePopulation();
             
             // Send initial best individual to parameter bridge

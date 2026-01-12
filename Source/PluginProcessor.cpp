@@ -9,7 +9,7 @@
 #include "PluginEditor.h"
 #include "JX11/Utils.h"
 #include "GA/ParameterBridge.h"
-#include "GA/DummyFitnessModel.h"
+#include "GA/PreferenceModel.h"
 
 //==============================================================================
 JX11AudioProcessor::JX11AudioProcessor()
@@ -56,7 +56,7 @@ JX11AudioProcessor::JX11AudioProcessor()
     setCurrentProgram(0);  // Load the default preset
     
     // Initialize fitness model
-    fitnessModel = std::make_unique<DummyFitnessModel>(12345);
+    fitnessModel = std::make_unique<PreferenceModel>();
     
     // Initialize GA engine with reference to fitness model
     gaEngine = std::make_unique<GeneticAlgorithm>(*fitnessModel);
@@ -777,13 +777,25 @@ void JX11AudioProcessor::logFeedback(const IFitnessModel::Feedback& feedback)
 {
     if (fitnessModel)
     {
-        // Use current parameters (targetParameters) as the genome for feedback
-        // Note: In real usage, we might want to ensure these params match what the user heard.
-        // For now, assuming user rates the currently loaded target parameters.
-        if (hasTargetParameters)
+        // Capture current parameter values directly from the plugin state
+        // This allows user tweaks to be included in the dataset and simplifies initialization.
+        std::vector<float> currentGenome(17);
+        
+        juce::RangedAudioParameter* params[17] =
         {
-             fitnessModel->sendFeedback(targetParameters, feedback);
+            oscMixParam, oscFineParam,
+            filterFreqParam, filterResoParam, filterEnvParam, filterLFOParam,
+            filterAttackParam, filterDecayParam, filterSustainParam, filterReleaseParam,
+            envAttackParam, envDecayParam, envSustainParam, envReleaseParam,
+            lfoRateParam, vibratoParam, noiseParam
+        };
+        
+        for (int i = 0; i < 17; ++i)
+        {
+            currentGenome[i] = params[i]->getValue(); // Normalized 0..1
         }
+        
+        fitnessModel->sendFeedback(currentGenome, feedback);
     }
 }
 
@@ -796,7 +808,7 @@ void JX11AudioProcessor::timerCallback()
         return;
              
     // Gradually interpolate toward target
-    if (hasTargetParameters)
+    if (isInterpolating)
     {
         interpolateAndApplyParameters();
     }
@@ -814,7 +826,7 @@ bool JX11AudioProcessor::fetchNextPreset()
     if (gaEngine->getParameterBridge()->pop(params, fitness))
     {
         targetParameters = params;
-        hasTargetParameters = true;
+        isInterpolating = true;
         lastGAFitness = fitness;
         return true;
     }
@@ -866,10 +878,10 @@ void JX11AudioProcessor::interpolateAndApplyParameters()
         params[i]->setValueNotifyingHost(currentParameters[i]);
     }
     
-    // If all parameters reached target, clear the flag
+    // If all parameters reached target, stop interpolating to save CPU
     if (allParamsReached)
     {
-        hasTargetParameters = false;
+        isInterpolating = false;
     }
 }
 

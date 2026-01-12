@@ -189,7 +189,7 @@ private:
     // Parameter smoothing for GA updates
     std::vector<float> targetParameters;   // Target from GA (18 floats, normalized [0,1])
     std::vector<float> currentParameters;  // Current smoothed values
-    bool hasTargetParameters = false;
+    bool isInterpolating = false;
     float lastGAFitness = 0.0f;            // Most recent fitness from GA
     static constexpr float parameterSmoothingTime = 0.4f;  // 400ms to reach target
     static constexpr float timerInterval = 0.05f;          // 50ms timer rate
