@@ -67,8 +67,7 @@ JX11AudioProcessorEditor::JX11AudioProcessorEditor (JX11AudioProcessor& p)
     likeButton.setColour(juce::TextButton::buttonColourId, juce::Colours::limegreen);
     likeButton.onClick = [this]()
     {
-        // 1.0 Rating = Like
-        audioProcessor.logFeedback({1.0f});
+        audioProcessor.logFeedback({1.0f, audioProcessor.getPlayTimeSeconds()});
         
         if (audioProcessor.fetchNextPreset())
         {
@@ -82,8 +81,7 @@ JX11AudioProcessorEditor::JX11AudioProcessorEditor (JX11AudioProcessor& p)
     dislikeButton.setColour(juce::TextButton::buttonColourId, juce::Colours::red);
     dislikeButton.onClick = [this]()
     {
-        // 0.0 Rating = Dislike
-        audioProcessor.logFeedback({0.0f});
+        audioProcessor.logFeedback({0.0f, audioProcessor.getPlayTimeSeconds()});
         
         if (audioProcessor.fetchNextPreset())
         {

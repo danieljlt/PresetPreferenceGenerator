@@ -9,6 +9,7 @@
 */
 
 #include "Population.h"
+#include "GenomeConstraints.h"
 #include <juce_core/juce_core.h>
 #include <algorithm>
 #include <limits>
@@ -34,6 +35,10 @@ void Population::initializeRandom()
         {
             params[i] = random.nextFloat();  // [0, 1]
         }
+        
+        // Repair genome to ensure audible output
+        GenomeConstraints::repair(params);
+        
         individual.setParameters(params);
         individual.invalidateFitness();
     }

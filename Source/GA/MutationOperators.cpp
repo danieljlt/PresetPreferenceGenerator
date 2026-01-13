@@ -10,6 +10,7 @@
 
 #include "MutationOperators.h"
 #include "Individual.h"
+#include "GenomeConstraints.h"
 
 void UniformMutation::operator()(Individual& individual, juce::Random& rng) const
 {
@@ -32,6 +33,9 @@ void UniformMutation::operator()(Individual& individual, juce::Random& rng) cons
             mutated = true;
         }
     }
+    
+    // Repair genome to ensure audible output
+    GenomeConstraints::repair(parameters);
     
     // Invalidate fitness if any parameter changed
     if (mutated)

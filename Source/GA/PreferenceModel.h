@@ -17,7 +17,7 @@
 class PreferenceModel : public IFitnessModel
 {
 public:
-    PreferenceModel();
+    PreferenceModel(const std::vector<juce::String>& parameterNames);
     ~PreferenceModel() override;
 
     /**
@@ -36,6 +36,18 @@ private:
     juce::File datasetFile;
     juce::Random rng;
     
+    // Schema tracking
+    const std::vector<juce::String> parameterNames;
+    
     // Ensure thread safety for file writing
     juce::CriticalSection fileLock;
+    
+    // Ensure thread safety for RNG (called from multiple threads)
+    juce::CriticalSection rngLock;
+    
+    // Check if existing file schema matches current code, rotate if not
+    void validateSchema();
+    
+    // Generate the header string (used as schema identifier)
+    juce::String getHeaderString() const;
 };

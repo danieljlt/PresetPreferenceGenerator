@@ -3,6 +3,11 @@
 
 # Exceptions (Whitelist)
 !Source/
+!Source/**
 !cmake/
+!cmake/**
 !CMakeLists.txt
 !.gitignore
+
+# Always ignore these
+.DS_Store

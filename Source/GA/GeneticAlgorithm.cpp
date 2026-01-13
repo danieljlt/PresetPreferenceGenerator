@@ -46,6 +46,19 @@ void GeneticAlgorithm::startGA()
     paused.store(false);
     pauseEvent.signal(); // Make sure we're not waiting
     
+    // Initialize population synchronously so first candidate is immediately available
+    if (!populationInitialized)
+    {
+        DBG("Initializing population");
+        initializePopulation();
+        
+        if (population && population->size() > 0)
+        {
+            Individual& best = population->getBest();
+            parameterBridge->push(best.getParameters(), best.getFitness());
+        }
+    }
+    
     // Start the thread with normal priority (good for background processing)
     startThread(juce::Thread::Priority::normal);
 }
@@ -144,25 +157,6 @@ void GeneticAlgorithm::run()
         if (threadShouldExit()) 
         {
             break;
-        }
-        
-        // Initialize population on first iteration
-        if (!populationInitialized)
-        {
-            DBG("Initializing population");
-            initializePopulation();
-            
-            // Send initial best individual to parameter bridge
-            if (population && population->size() > 0)
-            {
-                Individual& best = population->getBest();
-                parameterBridge->push(best.getParameters(), best.getFitness());
-            }
-            
-            if (threadShouldExit())
-                break;
-                
-            continue;  // Go back to start of loop to check for exit/pause
         }
         
         // Check for exit before starting generation

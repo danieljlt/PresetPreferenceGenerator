@@ -55,8 +55,12 @@ JX11AudioProcessor::JX11AudioProcessor()
     createPrograms();      // Populate preset list
     setCurrentProgram(0);  // Load the default preset
     
-    // Initialize fitness model
-    fitnessModel = std::make_unique<PreferenceModel>();
+    // Initialize fitness model with parameter names for CSV schema
+    std::vector<juce::String> paramNames;
+    for (const auto& pid : getGAParameterIDs())
+        paramNames.push_back(pid.getParamID());
+        
+    fitnessModel = std::make_unique<PreferenceModel>(paramNames);
     
     // Initialize GA engine with reference to fitness model
     gaEngine = std::make_unique<GeneticAlgorithm>(*fitnessModel);
@@ -720,6 +724,20 @@ juce::AudioProcessorValueTreeState::ParameterLayout JX11AudioProcessor::createPa
     return layout;
 }
 
+const std::vector<juce::ParameterID>& JX11AudioProcessor::getGAParameterIDs()
+{
+    static const std::vector<juce::ParameterID> params = 
+    {
+        ParameterID::oscMix, ParameterID::oscFine,
+        ParameterID::filterFreq, ParameterID::filterReso, ParameterID::filterEnv, ParameterID::filterLFO,
+        ParameterID::filterAttack, ParameterID::filterDecay, ParameterID::filterSustain, ParameterID::filterRelease,
+        ParameterID::envAttack, ParameterID::envDecay, ParameterID::envSustain, ParameterID::envRelease,
+        ParameterID::lfoRate, ParameterID::vibrato, ParameterID::noise
+    };
+    
+    return params;
+}
+
 
 //==============================================================================
 // GA Control Methods
@@ -736,6 +754,9 @@ void JX11AudioProcessor::startGA()
             bridge->clear();
             
         gaEngine->startGA();
+        
+        // Load the first candidate immediately so tracking begins with a GA preset
+        fetchNextPreset();
     }
 }
 
@@ -778,21 +799,21 @@ void JX11AudioProcessor::logFeedback(const IFitnessModel::Feedback& feedback)
     if (fitnessModel)
     {
         // Capture current parameter values directly from the plugin state
-        // This allows user tweaks to be included in the dataset and simplifies initialization.
-        std::vector<float> currentGenome(17);
+        const auto& gaParams = getGAParameterIDs();
+        std::vector<float> currentGenome;
+        currentGenome.reserve(gaParams.size());
         
-        juce::RangedAudioParameter* params[17] =
+        for (const auto& pid : gaParams)
         {
-            oscMixParam, oscFineParam,
-            filterFreqParam, filterResoParam, filterEnvParam, filterLFOParam,
-            filterAttackParam, filterDecayParam, filterSustainParam, filterReleaseParam,
-            envAttackParam, envDecayParam, envSustainParam, envReleaseParam,
-            lfoRateParam, vibratoParam, noiseParam
-        };
-        
-        for (int i = 0; i < 17; ++i)
-        {
-            currentGenome[i] = params[i]->getValue(); // Normalized 0..1
+            if (auto* param = apvts.getParameter(pid.getParamID()))
+            {
+                currentGenome.push_back(param->getValue()); // Normalized 0..1
+            }
+            else
+            {
+                // Should not happen if IDs are correct
+                currentGenome.push_back(0.0f);
+            }
         }
         
         fitnessModel->sendFeedback(currentGenome, feedback);
@@ -828,10 +849,16 @@ bool JX11AudioProcessor::fetchNextPreset()
         targetParameters = params;
         isInterpolating = true;
         lastGAFitness = fitness;
+        presetLoadTime = juce::Time::getCurrentTime();
         return true;
     }
     
     return false;
+}
+
+float JX11AudioProcessor::getPlayTimeSeconds() const
+{
+    return static_cast<float>((juce::Time::getCurrentTime() - presetLoadTime).inSeconds());
 }
 
 int JX11AudioProcessor::getNumCandidatesAvailable() const

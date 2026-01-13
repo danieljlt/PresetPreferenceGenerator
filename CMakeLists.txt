@@ -69,6 +69,8 @@ target_sources(PresetPreferenceGenerator
         Source/GA/MutationOperators.h
         Source/GA/CrossoverOperators.cpp
         Source/GA/CrossoverOperators.h
+        Source/GA/GenomeConstraints.cpp
+        Source/GA/GenomeConstraints.h
         
         # Fitness Model
         Source/GA/IFitnessModel.h

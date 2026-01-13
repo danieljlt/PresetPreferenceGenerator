@@ -22,8 +22,8 @@ public:
      */
     struct Feedback
     {
-        float rating; // 0.0 (Dislike) or 1.0 (Like)
-        // Future extensions: playTimeSeconds, tags, etc.
+        float rating;          // 0.0 (Dislike) or 1.0 (Like)
+        float playTimeSeconds; // Duration user played current preset before feedback
     };
 
     /**

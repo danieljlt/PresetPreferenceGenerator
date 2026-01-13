@@ -146,6 +146,10 @@ public:
     
     // Feedback mechanism
     void logFeedback(const IFitnessModel::Feedback& feedback);
+    float getPlayTimeSeconds() const;
+    
+    // Centralized definition of GA genome parameters
+    static const std::vector<juce::ParameterID>& getGAParameterIDs();
 
 private:
     // Timer callback - polls parameter bridge and applies smoothed updates
@@ -187,12 +191,13 @@ private:
     std::unique_ptr<GeneticAlgorithm> gaEngine; // The genetic algorithm engine
     
     // Parameter smoothing for GA updates
-    std::vector<float> targetParameters;   // Target from GA (18 floats, normalized [0,1])
+    std::vector<float> targetParameters;   // Target from GA (17 floats, normalized [0,1])
     std::vector<float> currentParameters;  // Current smoothed values
     bool isInterpolating = false;
     float lastGAFitness = 0.0f;            // Most recent fitness from GA
     static constexpr float parameterSmoothingTime = 0.4f;  // 400ms to reach target
     static constexpr float timerInterval = 0.05f;          // 50ms timer rate
+    juce::Time presetLoadTime;             // When current preset was loaded (for play time tracking)
 
     // Apply interpolated parameters to synth
     void interpolateAndApplyParameters();
