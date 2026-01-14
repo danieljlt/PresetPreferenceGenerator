@@ -788,12 +788,6 @@ bool JX11AudioProcessor::isGAPaused() const
     return gaEngine ? gaEngine->isGAPaused() : false;
 }
 
-void JX11AudioProcessor::debugLogQueue()
-{
-    if (gaEngine)
-        gaEngine->debugDumpQueue();
-}
-
 void JX11AudioProcessor::logFeedback(const IFitnessModel::Feedback& feedback)
 {
     if (fitnessModel)
@@ -866,7 +860,7 @@ int JX11AudioProcessor::getNumCandidatesAvailable() const
     if (!gaEngine || !gaEngine->getParameterBridge())
         return 0;
         
-    return gaEngine->getParameterBridge()->getNumAvailable();
+    return gaEngine->getParameterBridge()->hasData() ? 1 : 0;
 }
 
 void JX11AudioProcessor::interpolateAndApplyParameters()

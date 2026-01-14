@@ -138,12 +138,6 @@ public:
     bool fetchNextPreset();
     int getNumCandidatesAvailable() const;
     
-    // Debug: Get current smoothed parameters
-    const std::vector<float>& getCurrentGAParameters() const { return targetParameters; }
-    
-    // Debug: Print queue to console
-    void debugLogQueue();
-    
     // Feedback mechanism
     void logFeedback(const IFitnessModel::Feedback& feedback);
     float getPlayTimeSeconds() const;

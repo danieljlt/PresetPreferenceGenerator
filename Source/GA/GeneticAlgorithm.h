@@ -38,9 +38,6 @@ public:
     
     // Access to parameter bridge for processor to poll updates
     ParameterBridge* getParameterBridge() { return parameterBridge.get(); }
-    
-    // Debug
-    void debugDumpQueue();
 
 private:
     // GA Configuration Constants

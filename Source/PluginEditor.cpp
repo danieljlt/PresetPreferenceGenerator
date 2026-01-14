@@ -68,11 +68,7 @@ JX11AudioProcessorEditor::JX11AudioProcessorEditor (JX11AudioProcessor& p)
     likeButton.onClick = [this]()
     {
         audioProcessor.logFeedback({1.0f, audioProcessor.getPlayTimeSeconds()});
-        
-        if (audioProcessor.fetchNextPreset())
-        {
-           audioProcessor.debugLogQueue();
-        }
+        audioProcessor.fetchNextPreset();
     };
     gaTab.addAndMakeVisible(likeButton);
 
@@ -82,22 +78,9 @@ JX11AudioProcessorEditor::JX11AudioProcessorEditor (JX11AudioProcessor& p)
     dislikeButton.onClick = [this]()
     {
         audioProcessor.logFeedback({0.0f, audioProcessor.getPlayTimeSeconds()});
-        
-        if (audioProcessor.fetchNextPreset())
-        {
-           audioProcessor.debugLogQueue();
-        }
+        audioProcessor.fetchNextPreset();
     };
     gaTab.addAndMakeVisible(dislikeButton);
-    
-    // Candidates count label
-    candidatesLabel.setText("Candidates: 0", juce::dontSendNotification);
-    candidatesLabel.setJustificationType(juce::Justification::centred);
-    gaTab.addAndMakeVisible(candidatesLabel);
-    
-    // Debug parameters label
-    debugParamsLabel.setText("Params: --", juce::dontSendNotification);
-    debugParamsLabel.setJustificationType(juce::Justification::centredTop);
     
     // Add tabs
     tabbedComponent.addTab("Synth Controls", juce::Colours::lightgrey, &genericEditor, false);
@@ -149,17 +132,12 @@ void JX11AudioProcessorEditor::resized()
     gaBounds.removeFromTop(20); // Spacing
     fitnessLabel.setBounds(gaBounds.removeFromTop(30));
     
-    // Candidates area
+    // Feedback buttons
     gaBounds.removeFromTop(20); // Spacing
-    candidatesLabel.setBounds(gaBounds.removeFromTop(25));
     auto feedbackArea = gaBounds.removeFromTop(40).reduced(20, 0);
     int feedbackButtonWidth = feedbackArea.getWidth() / 2;
     dislikeButton.setBounds(feedbackArea.removeFromLeft(feedbackButtonWidth).reduced(5, 0));
     likeButton.setBounds(feedbackArea.removeFromLeft(feedbackButtonWidth).reduced(5, 0));
-    
-    // Debug params area
-    gaBounds.removeFromTop(10);
-    debugParamsLabel.setBounds(gaBounds.removeFromTop(100));
 }
 
 void JX11AudioProcessorEditor::timerCallback()
@@ -170,31 +148,10 @@ void JX11AudioProcessorEditor::timerCallback()
     float fitness = audioProcessor.getLastGAFitness();
     fitnessLabel.setText("Fitness: " + juce::String(fitness, 4), juce::dontSendNotification);
     
-    // Update candidates count
-    int candidates = audioProcessor.getNumCandidatesAvailable();
-    candidatesLabel.setText("Candidates: " + juce::String(candidates), juce::dontSendNotification);
-    
-    // Enable Feedback buttons only if candidates are available
-    likeButton.setEnabled(candidates > 0);
-    dislikeButton.setEnabled(candidates > 0);
-    
-    // Update debug parameters display
-    const auto& params = audioProcessor.getCurrentGAParameters();
-    if (!params.empty())
-    {
-        juce::String s;
-        for (size_t i = 0; i < params.size(); ++i)
-        {
-            s << juce::String(params[i], 2) << " ";
-            if ((i + 1) % 6 == 0) s << "\n"; // Newline every 6 params
-        }
-        debugParamsLabel.setText(s, juce::dontSendNotification);
-    }
-}
-
-void JX11AudioProcessorEditor::logMessage(const juce::String&)
-{
-    // Empty for now
+    // Enable Feedback buttons only when GA is running
+    bool hasPreset = audioProcessor.getNumCandidatesAvailable() > 0;
+    likeButton.setEnabled(hasPreset);
+    dislikeButton.setEnabled(hasPreset);
 }
 
 void JX11AudioProcessorEditor::updateGAButtonState()

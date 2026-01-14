@@ -74,8 +74,6 @@ target_sources(PresetPreferenceGenerator
         
         # Fitness Model
         Source/GA/IFitnessModel.h
-        Source/GA/DummyFitnessModel.cpp
-        Source/GA/DummyFitnessModel.h
         Source/GA/PreferenceModel.cpp
         Source/GA/PreferenceModel.h
 )

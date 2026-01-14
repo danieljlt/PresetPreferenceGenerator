@@ -22,11 +22,7 @@
 GeneticAlgorithm::GeneticAlgorithm(IFitnessModel& model) 
     : juce::Thread("GeneticAlgorithm"), fitnessModel(model)
 {
-    // Initialize parameter bridge with default queue capacity of 32
-    parameterBridge = std::make_unique<ParameterBridge>(32);
-    
-    // Set default fitness tolerance (2% worse allowed)
-    parameterBridge->setFitnessTolerance(0.02f);
+    parameterBridge = std::make_unique<ParameterBridge>();
 }
 
 GeneticAlgorithm::~GeneticAlgorithm()
@@ -130,15 +126,6 @@ void GeneticAlgorithm::initializePopulation()
 float GeneticAlgorithm::evaluateIndividual(const Individual& individual)
 {
     return fitnessModel.evaluate(individual.getParameters());
-    
-    // Fallback if no model (shouldn't happen)
-    return 0.0f;
-}
-
-void GeneticAlgorithm::debugDumpQueue()
-{
-    if (parameterBridge)
-        parameterBridge->debugLogQueueContents();
 }
 
 void GeneticAlgorithm::run()

@@ -43,11 +43,8 @@ private:
  
     juce::TextButton likeButton;
     juce::TextButton dislikeButton;
-    juce::Label candidatesLabel;
-    juce::Label debugParamsLabel; // Debug: show current parameter values
     
     // Helper methods
-    void logMessage(const juce::String& message);
     void updateGAButtonState();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (JX11AudioProcessorEditor)
