@@ -65,7 +65,7 @@ private:
     void run() override;
 
     // Helper methods for GA operations
-    void initializePopulation();
+    void initializePopulation(bool checkExitSignal = true);
     float evaluateIndividual(const Individual& individual);
     
     // Fitness Model

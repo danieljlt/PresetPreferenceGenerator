@@ -82,8 +82,17 @@ int Population::getBestIndex()
         updateStatistics();
     }
     
-    jassert(bestIndex >= 0);
     return bestIndex;
+}
+
+bool Population::hasBest()
+{
+    if (statisticsDirty)
+    {
+        updateStatistics();
+    }
+    
+    return bestIndex >= 0;
 }
 
 float Population::getBestFitness()

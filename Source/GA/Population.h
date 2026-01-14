@@ -27,6 +27,7 @@ public:
     const Individual& operator[](int index) const;
     Individual& getBest();
     int getBestIndex();
+    bool hasBest();
     int size() const { return static_cast<int>(individuals.size()); }
     
     // Statistics (efficient with caching)

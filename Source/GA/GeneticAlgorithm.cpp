@@ -46,9 +46,9 @@ void GeneticAlgorithm::startGA()
     if (!populationInitialized)
     {
         DBG("Initializing population");
-        initializePopulation();
+        initializePopulation(false);
         
-        if (population && population->size() > 0)
+        if (population && population->size() > 0 && population->hasBest())
         {
             Individual& best = population->getBest();
             parameterBridge->push(best.getParameters(), best.getFitness());
@@ -96,7 +96,7 @@ void GeneticAlgorithm::resumeGA()
     }
 }
 
-void GeneticAlgorithm::initializePopulation()
+void GeneticAlgorithm::initializePopulation(bool checkExitSignal)
 {
     // Create population with configured size and parameter count
     population = std::make_unique<Population>(POPULATION_SIZE, PARAMETER_COUNT);
@@ -107,7 +107,7 @@ void GeneticAlgorithm::initializePopulation()
     // Evaluate initial population
     for (int i = 0; i < population->size(); ++i)
     {
-        if (threadShouldExit())
+        if (checkExitSignal && threadShouldExit())
             return;
             
         Individual& individual = const_cast<Individual&>((*population)[i]);
@@ -159,8 +159,18 @@ void GeneticAlgorithm::run()
         selector.tournamentSize = 3;
         UniformCrossover crossover;
         UniformMutation mutation;
-        mutation.mutationRate = 0.1f;
-        mutation.mutationStrength = 0.2f;
+        mutation.mutationRate = 0.2f;    // Increased from 0.1f for more diversity
+        mutation.mutationStrength = 0.4f; // Increased from 0.2f for larger jumps
+        
+        // Check if the previous best preset has been picked up by the user.
+        // If the mailbox is full, we wait. This forces the GA to pace itself with the user's audition rate,
+        // preventing it from over-optimizing on the (potentially inaccurate) MLP model in the background.
+        if (parameterBridge->hasData())
+        {
+            // Wait for 100ms and check again
+            pauseEvent.wait(100);
+            continue;
+        }
         
         // Generate offspring
         std::vector<Individual> offspring;

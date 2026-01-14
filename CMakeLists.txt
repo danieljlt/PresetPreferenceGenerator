@@ -76,6 +76,10 @@ target_sources(PresetPreferenceGenerator
         Source/GA/IFitnessModel.h
         Source/GA/PreferenceModel.cpp
         Source/GA/PreferenceModel.h
+        Source/GA/MLP.cpp
+        Source/GA/MLP.h
+        Source/GA/MLPPreferenceModel.cpp
+        Source/GA/MLPPreferenceModel.h
 )
 
 # Link JUCE modules

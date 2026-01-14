@@ -9,7 +9,7 @@
 #include "PluginEditor.h"
 #include "JX11/Utils.h"
 #include "GA/ParameterBridge.h"
-#include "GA/PreferenceModel.h"
+#include "GA/MLPPreferenceModel.h"
 
 //==============================================================================
 JX11AudioProcessor::JX11AudioProcessor()
@@ -60,7 +60,7 @@ JX11AudioProcessor::JX11AudioProcessor()
     for (const auto& pid : getGAParameterIDs())
         paramNames.push_back(pid.getParamID());
         
-    fitnessModel = std::make_unique<PreferenceModel>(paramNames);
+    fitnessModel = std::make_unique<MLPPreferenceModel>(paramNames);
     
     // Initialize GA engine with reference to fitness model
     gaEngine = std::make_unique<GeneticAlgorithm>(*fitnessModel);
