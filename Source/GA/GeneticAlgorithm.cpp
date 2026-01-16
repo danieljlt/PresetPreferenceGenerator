@@ -75,7 +75,6 @@ void GeneticAlgorithm::stopGA()
     
     // Reset population initialization flag so it will re-initialize on next start
     populationInitialized = false;
-    bestFitnessSoFar = 0.0f;
 }
 
 void GeneticAlgorithm::pauseGA()
@@ -117,8 +116,6 @@ void GeneticAlgorithm::initializePopulation(bool checkExitSignal)
     
     // Update statistics to find best individual
     population->markDirty();
-    float bestFitness = population->getBestFitness();
-    bestFitnessSoFar = bestFitness;
     
     populationInitialized = true;
 }
@@ -150,11 +147,7 @@ void GeneticAlgorithm::run()
         if (threadShouldExit())
             break;
             
-        // ====================================================================
-        // STEADY-STATE GA: Generate and evaluate offspring
-        // ====================================================================
-        
-        // Create evolutionary operators
+        // Generate and evaluate offspring
         TournamentSelection selector;
         selector.tournamentSize = 3;
         UniformCrossover crossover;
@@ -212,10 +205,7 @@ void GeneticAlgorithm::run()
         if (threadShouldExit())
             break;
         
-        // ====================================================================
-        // REPLACEMENT: Replace worst individuals with offspring
-        // ====================================================================
-        
+        // Replace worst individuals with offspring
         if (!offspring.empty())
         {
             // Find indices of worst individuals
@@ -249,12 +239,7 @@ void GeneticAlgorithm::run()
             population->markDirty();
         }
         
-        // ====================================================================
-        // PARAMETER BRIDGE UPDATE: Push Best Offspring
-        // ====================================================================
-        
-        // Push the best new individual from this generation to ensure diversity.
-        // If we only push the population best, we get duplicates until a new best is found.
+        // Push best offspring from this generation to parameter bridge
         if (!offspring.empty())
         {
             auto bestOffspringIt = std::max_element(offspring.begin(), offspring.end(),
@@ -266,15 +251,6 @@ void GeneticAlgorithm::run()
             }
         }
 
-        // Update stats (best global fitness)
-        Individual& globalBest = population->getBest();
-
-        // Update best fitness tracker
-        if (globalBest.getFitness() > bestFitnessSoFar)
-        {
-            bestFitnessSoFar = globalBest.getFitness();
-        }
-        
         // Small sleep to prevent tight loop if not much work is happening
          juce::Thread::sleep(10);
     }

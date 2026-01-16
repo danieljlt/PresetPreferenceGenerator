@@ -28,8 +28,6 @@ public:
     void timerCallback() override;
 
 private:
-    // This reference is provided as a quick way for your editor to
-    // access the processor object that created it.
     JX11AudioProcessor& audioProcessor;
     
     // UI Components
@@ -43,6 +41,7 @@ private:
  
     juce::TextButton likeButton;
     juce::TextButton dislikeButton;
+    juce::TextButton skipButton;
     
     // Helper methods
     void updateGAButtonState();

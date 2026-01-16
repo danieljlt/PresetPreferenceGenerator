@@ -17,9 +17,6 @@ class IFitnessModel
 public:
     virtual ~IFitnessModel() = default;
 
-    /**
-     * Structure to hold user feedback.
-     */
     struct Feedback
     {
         float rating;          // 0.0 (Dislike) or 1.0 (Like)

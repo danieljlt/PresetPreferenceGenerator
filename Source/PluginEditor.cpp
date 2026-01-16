@@ -82,6 +82,15 @@ JX11AudioProcessorEditor::JX11AudioProcessorEditor (JX11AudioProcessor& p)
     };
     gaTab.addAndMakeVisible(dislikeButton);
     
+    // Skip Button
+    skipButton.setButtonText("Skip");
+    skipButton.setColour(juce::TextButton::buttonColourId, juce::Colours::grey);
+    skipButton.onClick = [this]()
+    {
+        audioProcessor.fetchNextPreset();
+    };
+    gaTab.addAndMakeVisible(skipButton);
+    
     // Add tabs
     tabbedComponent.addTab("Synth Controls", juce::Colours::lightgrey, &genericEditor, false);
     tabbedComponent.addTab("Genetic Algorithm", juce::Colours::lightgrey, &gaTab, false);
@@ -135,8 +144,9 @@ void JX11AudioProcessorEditor::resized()
     // Feedback buttons
     gaBounds.removeFromTop(20); // Spacing
     auto feedbackArea = gaBounds.removeFromTop(40).reduced(20, 0);
-    int feedbackButtonWidth = feedbackArea.getWidth() / 2;
+    int feedbackButtonWidth = feedbackArea.getWidth() / 3;
     dislikeButton.setBounds(feedbackArea.removeFromLeft(feedbackButtonWidth).reduced(5, 0));
+    skipButton.setBounds(feedbackArea.removeFromLeft(feedbackButtonWidth).reduced(5, 0));
     likeButton.setBounds(feedbackArea.removeFromLeft(feedbackButtonWidth).reduced(5, 0));
 }
 
@@ -152,13 +162,14 @@ void JX11AudioProcessorEditor::timerCallback()
     bool hasPreset = audioProcessor.getNumCandidatesAvailable() > 0;
     likeButton.setEnabled(hasPreset);
     dislikeButton.setEnabled(hasPreset);
+    skipButton.setEnabled(hasPreset);
 }
 
 void JX11AudioProcessorEditor::updateGAButtonState()
 {
     bool isRunning = audioProcessor.isGARunning();
     bool isPaused = audioProcessor.isGAPaused();
-    // Note: Start/Stop button logic simplified (always enabled if idle)
+    
     if (isRunning) 
     {
         gaStartStopButton.setButtonText("Stop GA");

@@ -38,20 +38,11 @@ public:
     void train(const std::vector<float>& input, float target, 
                float learningRate = 0.05f, float sampleWeight = 1.0f);
     
-    /**
-     * Get flattened weight vector for persistence.
-     */
     std::vector<float> getWeights() const;
     
-    /**
-     * Set weights from flattened vector.
-     * @return true if size matches, false otherwise
-     */
+    // Returns true if size matches, false otherwise
     bool setWeights(const std::vector<float>& weights);
     
-    /**
-     * Expected size of weight vector.
-     */
     static int getWeightCount();
 
 private:

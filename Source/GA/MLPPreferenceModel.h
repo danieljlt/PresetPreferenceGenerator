@@ -22,9 +22,6 @@ public:
     MLPPreferenceModel(const std::vector<juce::String>& parameterNames);
     ~MLPPreferenceModel() override;
 
-    /**
-     * Returns MLP prediction for this genome.
-     */
     float evaluate(const std::vector<float>& genome) override;
 
     /**

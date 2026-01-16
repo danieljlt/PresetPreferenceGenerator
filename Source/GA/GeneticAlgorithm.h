@@ -55,9 +55,6 @@ private:
     // Parameter communication bridge to main synth
     std::unique_ptr<ParameterBridge> parameterBridge;
     
-    // Track best fitness across generations
-    float bestFitnessSoFar = 0.0f;
-    
     // Random number generator for GA operations
     juce::Random rng;
     
