@@ -4,6 +4,8 @@
 # Exceptions (Whitelist)
 !Source/
 !Source/**
+!Tests/
+!Tests/**
 !cmake/
 !cmake/**
 !CMakeLists.txt

@@ -19,6 +19,9 @@ CPMAddPackage(
         "JUCE_BUILD_EXTRAS ON"
 )
 
+# Add Catch2 for unit testing
+CPMAddPackage("gh:catchorg/Catch2@3.4.0")
+
 # Create the plugin target
 juce_add_plugin(PresetPreferenceGenerator
     COMPANY_NAME "DanielLister"
@@ -101,3 +104,21 @@ target_compile_definitions(PresetPreferenceGenerator
         JUCE_USE_CURL=0
         JUCE_VST3_CAN_REPLACE_VST2=0
 )
+
+# Unit test executable
+add_executable(Tests
+    Tests/MLPTests.cpp
+    Tests/GAOperatorsTests.cpp
+    Tests/PopulationTests.cpp
+    Tests/GenomeConstraintsTests.cpp
+    Source/GA/MLP.cpp
+    Source/GA/Individual.cpp
+    Source/GA/Population.cpp
+    Source/GA/GenomeConstraints.cpp
+    Source/GA/MutationOperators.cpp
+    Source/GA/CrossoverOperators.cpp
+    Source/GA/SelectionOperators.cpp
+)
+
+target_include_directories(Tests PRIVATE ${CMAKE_SOURCE_DIR}/Source)
+target_link_libraries(Tests PRIVATE Catch2::Catch2WithMain juce::juce_core)
