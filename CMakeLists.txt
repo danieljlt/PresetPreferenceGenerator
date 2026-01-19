@@ -111,14 +111,22 @@ add_executable(Tests
     Tests/GAOperatorsTests.cpp
     Tests/PopulationTests.cpp
     Tests/GenomeConstraintsTests.cpp
+    Tests/IndividualTests.cpp
+    Tests/ParameterBridgeTests.cpp
+    Tests/MLPPreferenceModelTests.cpp
+    Tests/GeneticAlgorithmTests.cpp
     Source/GA/MLP.cpp
+    Source/GA/MLPPreferenceModel.cpp
     Source/GA/Individual.cpp
     Source/GA/Population.cpp
     Source/GA/GenomeConstraints.cpp
     Source/GA/MutationOperators.cpp
     Source/GA/CrossoverOperators.cpp
     Source/GA/SelectionOperators.cpp
+    Source/GA/ParameterBridge.cpp
+    Source/GA/GeneticAlgorithm.cpp
 )
 
 target_include_directories(Tests PRIVATE ${CMAKE_SOURCE_DIR}/Source)
-target_link_libraries(Tests PRIVATE Catch2::Catch2WithMain juce::juce_core)
+target_link_libraries(Tests PRIVATE Catch2::Catch2WithMain juce::juce_core juce::juce_audio_basics)
+

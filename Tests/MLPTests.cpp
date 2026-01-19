@@ -51,3 +51,60 @@ TEST_CASE("MLP weight persistence round-trips correctly")
     
     REQUIRE_THAT(prediction2, Catch::Matchers::WithinAbs(prediction1, 0.0001f));
 }
+
+TEST_CASE("MLP setWeights returns false for wrong size")
+{
+    MLP mlp;
+    
+    std::vector<float> tooFew(10, 0.0f);
+    REQUIRE(mlp.setWeights(tooFew) == false);
+    
+    std::vector<float> tooMany(MLP::getWeightCount() + 100, 0.0f);
+    REQUIRE(mlp.setWeights(tooMany) == false);
+}
+
+TEST_CASE("MLP sample weight affects training magnitude")
+{
+    MLP mlp1;
+    std::vector<float> input(MLP::INPUT_SIZE, 0.5f);
+    
+    // Copy weights to second MLP so both start identical
+    MLP mlp2;
+    mlp2.setWeights(mlp1.getWeights());
+    
+    float initial = mlp1.predict(input);
+    
+    // Train mlp1 with low sample weight
+    mlp1.train(input, 1.0f, 0.1f, 0.1f);
+    float lowWeightDelta = std::abs(mlp1.predict(input) - initial);
+    
+    // Train mlp2 with high sample weight
+    mlp2.train(input, 1.0f, 0.1f, 2.0f);
+    float highWeightDelta = std::abs(mlp2.predict(input) - initial);
+    
+    // Higher sample weight should cause larger change
+    REQUIRE(highWeightDelta > lowWeightDelta);
+}
+
+TEST_CASE("MLP handles extreme input values without NaN")
+{
+    MLP mlp;
+    
+    // All zeros
+    std::vector<float> zeros(MLP::INPUT_SIZE, 0.0f);
+    float predZero = mlp.predict(zeros);
+    REQUIRE(std::isfinite(predZero));
+    
+    // All ones
+    std::vector<float> ones(MLP::INPUT_SIZE, 1.0f);
+    float predOne = mlp.predict(ones);
+    REQUIRE(std::isfinite(predOne));
+    
+    // Train with extremes
+    mlp.train(zeros, 0.0f, 0.1f);
+    mlp.train(ones, 1.0f, 0.1f);
+    
+    // Should still produce finite values
+    REQUIRE(std::isfinite(mlp.predict(zeros)));
+    REQUIRE(std::isfinite(mlp.predict(ones)));
+}

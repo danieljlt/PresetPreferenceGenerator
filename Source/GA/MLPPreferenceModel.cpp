@@ -10,13 +10,22 @@
 #include <algorithm>
 #include <random>
 
-MLPPreferenceModel::MLPPreferenceModel(const std::vector<juce::String>& names)
+MLPPreferenceModel::MLPPreferenceModel(const std::vector<juce::String>& names,
+                                       const juce::File& baseDirectory)
     : parameterNames(names)
 {
-    // Set up file paths on Desktop for easy access
-    auto desktop = juce::File::getSpecialLocation(juce::File::userDesktopDirectory);
-    datasetFile = desktop.getChildFile("feedback_dataset.csv");
-    weightsFile = desktop.getChildFile("mlp_weights.bin");
+    // Use provided directory or fall back to Application Support
+    if (baseDirectory.isDirectory())
+        baseDir = baseDirectory;
+    else
+    {
+        baseDir = juce::File::getSpecialLocation(juce::File::userHomeDirectory)
+                      .getChildFile("Library/Application Support/PresetPreferenceGenerator");
+        baseDir.createDirectory();
+    }
+    
+    datasetFile = baseDir.getChildFile("feedback_dataset.csv");
+    weightsFile = baseDir.getChildFile("mlp_weights.bin");
     
     // Try to load existing weights, otherwise MLP stays with random init
     loadWeights();
@@ -39,6 +48,14 @@ float MLPPreferenceModel::evaluate(const std::vector<float>& genome)
 
 void MLPPreferenceModel::sendFeedback(const std::vector<float>& genome, const Feedback& feedback)
 {
+    ++sampleCount;
+    
+    float prediction;
+    {
+        std::lock_guard<std::mutex> lock(mlpMutex);
+        prediction = mlp.predict(genome);
+    }
+    
     // Add to replay buffer
     if (replayBuffer.size() < maxBufferSize)
         replayBuffer.push_back({genome, feedback});
@@ -55,7 +72,7 @@ void MLPPreferenceModel::sendFeedback(const std::vector<float>& genome, const Fe
     }
     
     saveWeights();
-    appendToCSV(genome, feedback);
+    appendToCSV(genome, feedback, prediction, sampleCount);
 }
 
 void MLPPreferenceModel::loadWeights()
@@ -144,11 +161,12 @@ juce::String MLPPreferenceModel::getHeaderString() const
     juce::String header;
     for (const auto& name : parameterNames)
         header += name + ",";
-    header += "rating,playTimeSeconds";
+    header += "rating,playTimeSeconds,sampleIndex,mlpPrediction,timestamp";
     return header;
 }
 
-void MLPPreferenceModel::appendToCSV(const std::vector<float>& genome, const Feedback& feedback)
+void MLPPreferenceModel::appendToCSV(const std::vector<float>& genome, const Feedback& feedback,
+                                      float mlpPrediction, size_t sampleIndex)
 {
     const juce::ScopedLock lock(fileLock);
     
@@ -157,7 +175,10 @@ void MLPPreferenceModel::appendToCSV(const std::vector<float>& genome, const Fee
         line += juce::String(param, 6) + ",";
     
     line += juce::String(feedback.rating, 1) + ",";
-    line += juce::String(feedback.playTimeSeconds, 2);
+    line += juce::String(feedback.playTimeSeconds, 2) + ",";
+    line += juce::String(static_cast<int>(sampleIndex)) + ",";
+    line += juce::String(mlpPrediction, 6) + ",";
+    line += juce::Time::getCurrentTime().toISO8601(true);
     
     datasetFile.appendText(line + "\n");
 }

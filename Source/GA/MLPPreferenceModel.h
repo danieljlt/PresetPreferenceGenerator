@@ -19,7 +19,8 @@
 class MLPPreferenceModel : public IFitnessModel
 {
 public:
-    MLPPreferenceModel(const std::vector<juce::String>& parameterNames);
+    MLPPreferenceModel(const std::vector<juce::String>& parameterNames,
+                       const juce::File& baseDirectory = juce::File());
     ~MLPPreferenceModel() override;
 
     float evaluate(const std::vector<float>& genome) override;
@@ -45,14 +46,18 @@ private:
     
     // Weight persistence
     juce::File weightsFile;
+    juce::File baseDir;
     
     static constexpr float learningRate = 0.001f;
     static constexpr int replayBatchSize = 8;
     
+    size_t sampleCount = 0;
+    
     void loadWeights();
     void saveWeights();
     void initCSV();
-    void appendToCSV(const std::vector<float>& genome, const Feedback& feedback);
+    void appendToCSV(const std::vector<float>& genome, const Feedback& feedback,
+                     float mlpPrediction, size_t sampleIndex);
     juce::String getHeaderString() const;
     void replayTrain();
 };

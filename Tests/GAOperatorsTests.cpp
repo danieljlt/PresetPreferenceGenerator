@@ -76,3 +76,35 @@ TEST_CASE("Tournament selection returns valid index")
     REQUIRE(selected >= 0);
     REQUIRE(selected < 10);
 }
+
+TEST_CASE("Tournament selection statistically favors higher fitness")
+{
+    Population pop(10, 17);
+    pop.initializeRandom();
+    
+    // Set distinct fitness values: indices 0-4 have low fitness, 5-9 have high
+    for (int i = 0; i < 10; ++i)
+    {
+        Individual& ind = const_cast<Individual&>(pop[i]);
+        ind.setFitness(static_cast<float>(i) / 10.0f);
+    }
+    pop.markDirty();
+    
+    juce::Random rng(123);
+    TournamentSelection selector;
+    selector.tournamentSize = 3;
+    
+    int highFitnessCount = 0;
+    const int trials = 1000;
+    
+    for (int t = 0; t < trials; ++t)
+    {
+        int selected = selector(pop, rng);
+        if (selected >= 5)  // High fitness half
+            ++highFitnessCount;
+    }
+    
+    // Should select from high-fitness half more than 50% of the time
+    float ratio = static_cast<float>(highFitnessCount) / trials;
+    REQUIRE(ratio > 0.6f);  // Expect significant bias toward higher fitness
+}
