@@ -66,6 +66,16 @@ PARAMETER_ID(polyMode)
 }
 
 //==============================================================================
+// Experiment modes for thesis A/B testing
+enum class ExperimentMode
+{
+    Baseline,        // No enhancements
+    AdaptiveOnly,    // Only adaptive exploration
+    NoveltyOnly,     // Only novelty bonus + multi-objective
+    AllEnhancements  // All features enabled
+};
+
+//==============================================================================
 // Main plugin processor class for JX11
 class JX11AudioProcessor  : public juce::AudioProcessor,
                             private juce::ValueTree::Listener,
@@ -144,6 +154,11 @@ public:
     
     // Centralized definition of GA genome parameters
     static const std::vector<juce::ParameterID>& getGAParameterIDs();
+    
+    // GA configuration for experiment toggles
+    void setGAConfig(const GAConfig& config);
+    void setExperimentMode(ExperimentMode mode);
+    ExperimentMode getExperimentMode() const { return currentExperimentMode; }
 
 private:
     // Timer callback - polls parameter bridge and applies smoothed updates
@@ -192,6 +207,7 @@ private:
     static constexpr float parameterSmoothingTime = 0.4f;  // 400ms to reach target
     static constexpr float timerInterval = 0.05f;          // 50ms timer rate
     juce::Time presetLoadTime;             // When current preset was loaded (for play time tracking)
+    ExperimentMode currentExperimentMode = ExperimentMode::Baseline;
 
     // Apply interpolated parameters to synth
     void interpolateAndApplyParameters();

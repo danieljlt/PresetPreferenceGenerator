@@ -115,6 +115,7 @@ add_executable(Tests
     Tests/ParameterBridgeTests.cpp
     Tests/MLPPreferenceModelTests.cpp
     Tests/GeneticAlgorithmTests.cpp
+    Tests/IntegrationTests.cpp
     Source/GA/MLP.cpp
     Source/GA/MLPPreferenceModel.cpp
     Source/GA/Individual.cpp

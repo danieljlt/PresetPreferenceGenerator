@@ -161,7 +161,7 @@ juce::String MLPPreferenceModel::getHeaderString() const
     juce::String header;
     for (const auto& name : parameterNames)
         header += name + ",";
-    header += "rating,playTimeSeconds,sampleIndex,mlpPrediction,timestamp";
+    header += "rating,playTimeSeconds,sampleIndex,mlpPrediction,configFlags,timestamp";
     return header;
 }
 
@@ -178,6 +178,7 @@ void MLPPreferenceModel::appendToCSV(const std::vector<float>& genome, const Fee
     line += juce::String(feedback.playTimeSeconds, 2) + ",";
     line += juce::String(static_cast<int>(sampleIndex)) + ",";
     line += juce::String(mlpPrediction, 6) + ",";
+    line += configFlags + ",";
     line += juce::Time::getCurrentTime().toISO8601(true);
     
     datasetFile.appendText(line + "\n");

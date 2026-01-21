@@ -6,6 +6,8 @@
 !Source/**
 !Tests/
 !Tests/**
+!analysis/
+!analysis/**
 !cmake/
 !cmake/**
 !CMakeLists.txt

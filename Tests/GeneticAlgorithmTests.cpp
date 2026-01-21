@@ -108,3 +108,64 @@ TEST_CASE("GeneticAlgorithm double stop is safe")
     REQUIRE(ga.isGARunning() == false);
 }
 
+TEST_CASE("GAConfig defaults are sensible")
+{
+    GAConfig config;
+    
+    REQUIRE(config.adaptiveExploration == false);
+    REQUIRE(config.noveltyBonus == false);
+    REQUIRE(config.multiObjective == false);
+    REQUIRE(config.epsilonMax > config.epsilonMin);
+    REQUIRE(config.epsilonDecay > 0.0f);
+    REQUIRE(config.epsilonDecay < 1.0f);
+    REQUIRE(config.noveltyWeight >= 0.0f);
+    REQUIRE(config.noveltyWeight <= 1.0f);
+}
+
+TEST_CASE("setConfig enables adaptive exploration")
+{
+    MockFitnessModel model;
+    GeneticAlgorithm ga(model);
+    
+    GAConfig config;
+    config.adaptiveExploration = true;
+    config.epsilonMax = 0.8f;
+    config.epsilonMin = 0.1f;
+    
+    ga.setConfig(config);
+    
+    REQUIRE(ga.getConfig().adaptiveExploration == true);
+    REQUIRE(ga.getConfig().epsilonMax == 0.8f);
+}
+
+TEST_CASE("setConfig enables novelty bonus")
+{
+    MockFitnessModel model;
+    GeneticAlgorithm ga(model);
+    
+    GAConfig config;
+    config.noveltyBonus = true;
+    config.noveltyK = 3;
+    
+    ga.setConfig(config);
+    
+    REQUIRE(ga.getConfig().noveltyBonus == true);
+    REQUIRE(ga.getConfig().noveltyK == 3);
+}
+
+TEST_CASE("setConfig enables multi-objective")
+{
+    MockFitnessModel model;
+    GeneticAlgorithm ga(model);
+    
+    GAConfig config;
+    config.multiObjective = true;
+    config.noveltyBonus = true;
+    config.noveltyWeight = 0.4f;
+    
+    ga.setConfig(config);
+    
+    REQUIRE(ga.getConfig().multiObjective == true);
+    REQUIRE(ga.getConfig().noveltyWeight == 0.4f);
+}
+

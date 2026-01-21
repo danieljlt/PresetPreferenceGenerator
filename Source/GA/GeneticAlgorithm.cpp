@@ -18,6 +18,7 @@
 #include "IFitnessModel.h"
 #include <algorithm>
 #include <vector>
+#include <cmath>
 
 GeneticAlgorithm::GeneticAlgorithm(IFitnessModel& model) 
     : juce::Thread("GeneticAlgorithm"), fitnessModel(model)
@@ -122,7 +123,76 @@ void GeneticAlgorithm::initializePopulation(bool checkExitSignal)
 
 float GeneticAlgorithm::evaluateIndividual(const Individual& individual)
 {
-    return fitnessModel.evaluate(individual.getParameters());
+    float mlpFitness = fitnessModel.evaluate(individual.getParameters());
+    
+    if (config.multiObjective && config.noveltyBonus && population)
+    {
+        float novelty = computeNovelty(individual);
+        return computeCombinedFitness(mlpFitness, novelty);
+    }
+    
+    return mlpFitness;
+}
+
+void GeneticAlgorithm::setConfig(const GAConfig& cfg)
+{
+    config = cfg;
+    if (config.adaptiveExploration)
+    {
+        currentEpsilon = config.epsilonMax;
+    }
+    else
+    {
+        currentEpsilon = DEFAULT_EXPLORATION_RATE;
+    }
+}
+
+float GeneticAlgorithm::computeNovelty(const Individual& individual)
+{
+    if (!population || population->size() < 2)
+        return 0.0f;
+    
+    const auto& params = individual.getParameters();
+    std::vector<float> distances;
+    distances.reserve(population->size());
+    
+    for (int i = 0; i < population->size(); ++i)
+    {
+        const auto& otherParams = (*population)[i].getParameters();
+        if (&otherParams == &params)
+            continue;
+        
+        float sumSq = 0.0f;
+        for (size_t j = 0; j < params.size(); ++j)
+        {
+            float diff = params[j] - otherParams[j];
+            sumSq += diff * diff;
+        }
+        distances.push_back(std::sqrt(sumSq));
+    }
+    
+    if (distances.empty())
+        return 0.0f;
+    
+    std::sort(distances.begin(), distances.end());
+    
+    int k = std::min(config.noveltyK, static_cast<int>(distances.size()));
+    float sum = 0.0f;
+    for (int i = 0; i < k; ++i)
+    {
+        sum += distances[i];
+    }
+    
+    float avgDist = sum / static_cast<float>(k);
+    
+    // Normalize: max distance in unit hypercube is sqrt(PARAMETER_COUNT)
+    float maxDist = std::sqrt(static_cast<float>(PARAMETER_COUNT));
+    return std::min(avgDist / maxDist, 1.0f);
+}
+
+float GeneticAlgorithm::computeCombinedFitness(float mlpFitness, float novelty)
+{
+    return (1.0f - config.noveltyWeight) * mlpFitness + config.noveltyWeight * novelty;
 }
 
 void GeneticAlgorithm::run()
@@ -155,9 +225,8 @@ void GeneticAlgorithm::run()
         mutation.mutationRate = 0.2f;    // Increased from 0.1f for more diversity
         mutation.mutationStrength = 0.4f; // Increased from 0.2f for larger jumps
         
-        // Check if the previous best preset has been picked up by the user.
-        // If the mailbox is full, we wait. This forces the GA to pace itself with the user's audition rate,
-        // preventing it from over-optimizing on the (potentially inaccurate) MLP model in the background.
+        // Check if the previous best preset has been picked up by user.
+        // If the mailbox is full, wait.
         if (parameterBridge->hasData())
         {
             // Wait for 100ms and check again
@@ -239,8 +308,16 @@ void GeneticAlgorithm::run()
             population->markDirty();
         }
         
-        // Push best offspring from this generation to parameter bridge
-        if (!offspring.empty())
+        // Epsilon-greedy for pushing to parameter bridge
+        bool explore = rng.nextFloat() < currentEpsilon;
+        
+        if (explore)
+        {
+            int randIdx = rng.nextInt(population->size());
+            const Individual& exploratory = (*population)[randIdx];
+            parameterBridge->push(exploratory.getParameters(), exploratory.getFitness());
+        }
+        else if (!offspring.empty())
         {
             auto bestOffspringIt = std::max_element(offspring.begin(), offspring.end(),
                 [](const Individual& a, const Individual& b) { return a.getFitness() < b.getFitness(); });
@@ -250,9 +327,14 @@ void GeneticAlgorithm::run()
                 parameterBridge->push(bestOffspringIt->getParameters(), bestOffspringIt->getFitness());
             }
         }
+        
+        // Decay epsilon if adaptive exploration is enabled
+        if (config.adaptiveExploration)
+        {
+            currentEpsilon = std::max(config.epsilonMin, currentEpsilon * config.epsilonDecay);
+        }
 
-        // Small sleep to prevent tight loop if not much work is happening
-         juce::Thread::sleep(10);
+        juce::Thread::sleep(10);
     }
 }
 

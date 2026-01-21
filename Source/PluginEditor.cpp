@@ -54,12 +54,12 @@ JX11AudioProcessorEditor::JX11AudioProcessorEditor (JX11AudioProcessor& p)
     };
     gaTab.addAndMakeVisible(gaPauseResumeButton);
     
-    // Fitness display
+    // Fitness display (hidden to avoid biasing user ratings)
     fitnessLabel.setText("Fitness: --", juce::dontSendNotification);
     fitnessLabel.setJustificationType(juce::Justification::centred);
     fitnessLabel.setColour(juce::Label::backgroundColourId, juce::Colours::black);
     fitnessLabel.setColour(juce::Label::textColourId, juce::Colours::white);
-    fitnessLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+    fitnessLabel.setVisible(false);
     gaTab.addAndMakeVisible(fitnessLabel);
     
     // Like Button
@@ -90,6 +90,23 @@ JX11AudioProcessorEditor::JX11AudioProcessorEditor (JX11AudioProcessor& p)
         audioProcessor.fetchNextPreset();
     };
     gaTab.addAndMakeVisible(skipButton);
+    
+    // Experiment mode selector
+    experimentLabel.setText("Experiment Mode:", juce::dontSendNotification);
+    gaTab.addAndMakeVisible(experimentLabel);
+    
+    experimentModeBox.addItem("Baseline", 1);
+    experimentModeBox.addItem("Adaptive Only", 2);
+    experimentModeBox.addItem("Novelty Only", 3);
+    experimentModeBox.addItem("All Enhancements", 4);
+    // Initialize from processor state
+    experimentModeBox.setSelectedId(static_cast<int>(audioProcessor.getExperimentMode()) + 1, juce::dontSendNotification);
+    experimentModeBox.onChange = [this]()
+    {
+        int id = experimentModeBox.getSelectedId();
+        audioProcessor.setExperimentMode(static_cast<ExperimentMode>(id - 1));
+    };
+    gaTab.addAndMakeVisible(experimentModeBox);
     
     // Add tabs
     tabbedComponent.addTab("Synth Controls", juce::Colours::lightgrey, &genericEditor, false);
@@ -137,9 +154,8 @@ void JX11AudioProcessorEditor::resized()
     gaStartStopButton.setBounds(startStopBounds);
     gaPauseResumeButton.setBounds(pauseResumeBounds);
     
-    // Fitness label
+    // Fitness label hidden - skip layout
     gaBounds.removeFromTop(20); // Spacing
-    fitnessLabel.setBounds(gaBounds.removeFromTop(30));
     
     // Feedback buttons
     gaBounds.removeFromTop(20); // Spacing
@@ -148,6 +164,12 @@ void JX11AudioProcessorEditor::resized()
     dislikeButton.setBounds(feedbackArea.removeFromLeft(feedbackButtonWidth).reduced(5, 0));
     skipButton.setBounds(feedbackArea.removeFromLeft(feedbackButtonWidth).reduced(5, 0));
     likeButton.setBounds(feedbackArea.removeFromLeft(feedbackButtonWidth).reduced(5, 0));
+    
+    // Experiment mode selector
+    gaBounds.removeFromTop(30);
+    auto modeArea = gaBounds.removeFromTop(30);
+    experimentLabel.setBounds(modeArea.removeFromLeft(150));
+    experimentModeBox.setBounds(modeArea.reduced(5, 0));
 }
 
 void JX11AudioProcessorEditor::timerCallback()

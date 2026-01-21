@@ -12,6 +12,7 @@
 
 #include <juce_core/juce_core.h>
 #include <juce_audio_basics/juce_audio_basics.h>
+#include "GAConfig.h"
 #include <atomic>
 #include <memory>
 #include <mutex>
@@ -38,12 +39,20 @@ public:
     
     // Access to parameter bridge for processor to poll updates
     ParameterBridge* getParameterBridge() { return parameterBridge.get(); }
+    
+    // Configuration for experiment toggles
+    void setConfig(const GAConfig& cfg);
+    const GAConfig& getConfig() const { return config; }
 
 private:
     // GA Configuration Constants
     static constexpr int POPULATION_SIZE = 50;
     static constexpr int OFFSPRING_PER_GENERATION = 10;
-    static constexpr int PARAMETER_COUNT = 17;  // Number of GA-controlled synth parameters
+    static constexpr int PARAMETER_COUNT = 17;
+    static constexpr float DEFAULT_EXPLORATION_RATE = 0.25f;
+    
+    GAConfig config;
+    float currentEpsilon = DEFAULT_EXPLORATION_RATE;
     
     std::atomic<bool> paused { false };
     juce::WaitableEvent pauseEvent;
@@ -64,6 +73,8 @@ private:
     // Helper methods for GA operations
     void initializePopulation(bool checkExitSignal = true);
     float evaluateIndividual(const Individual& individual);
+    float computeNovelty(const Individual& individual);
+    float computeCombinedFitness(float mlpFitness, float novelty);
     
     // Fitness Model
     IFitnessModel& fitnessModel;

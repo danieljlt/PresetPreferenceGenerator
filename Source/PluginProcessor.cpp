@@ -415,7 +415,13 @@ juce::AudioProcessorEditor* JX11AudioProcessor::createEditor()
 
 void JX11AudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
-    copyXmlToBinary(*apvts.copyState().createXml(), destData);
+    auto state = apvts.copyState();
+    std::unique_ptr<juce::XmlElement> xml = state.createXml();
+    
+    // Save experiment mode
+    xml->setAttribute("ExperimentMode", static_cast<int>(currentExperimentMode));
+    
+    copyXmlToBinary(*xml, destData);
 }
 
 void JX11AudioProcessor::setStateInformation (const void* data, int sizeInBytes)
@@ -425,6 +431,16 @@ void JX11AudioProcessor::setStateInformation (const void* data, int sizeInBytes)
     {
         apvts.replaceState(juce::ValueTree::fromXml(*xml));
         parametersChanged.store(true);
+        
+        // Restore experiment mode
+        if (xml->hasAttribute("ExperimentMode"))
+        {
+            int modeIdx = xml->getIntAttribute("ExperimentMode");
+            if (modeIdx >= 0 && modeIdx <= 3) // Validate range
+            {
+                setExperimentMode(static_cast<ExperimentMode>(modeIdx));
+            }
+        }
     }
 }
 
@@ -806,6 +822,49 @@ void JX11AudioProcessor::logFeedback(const IFitnessModel::Feedback& feedback)
         
         fitnessModel->sendFeedback(currentGenome, feedback);
     }
+}
+
+void JX11AudioProcessor::setGAConfig(const GAConfig& config)
+{
+    if (gaEngine)
+    {
+        gaEngine->setConfig(config);
+    }
+    
+    // Update config flags in preference model for CSV logging
+    if (auto* mlpModel = dynamic_cast<MLPPreferenceModel*>(fitnessModel.get()))
+    {
+        mlpModel->setConfigFlags(config.toString());
+    }
+}
+
+void JX11AudioProcessor::setExperimentMode(ExperimentMode mode)
+{
+    GAConfig config;
+    
+    switch (mode)
+    {
+        case ExperimentMode::Baseline:
+            break;
+            
+        case ExperimentMode::AdaptiveOnly:
+            config.adaptiveExploration = true;
+            break;
+            
+        case ExperimentMode::NoveltyOnly:
+            config.noveltyBonus = true;
+            config.multiObjective = true;
+            break;
+            
+        case ExperimentMode::AllEnhancements:
+            config.adaptiveExploration = true;
+            config.noveltyBonus = true;
+            config.multiObjective = true;
+            break;
+    }
+    
+    setGAConfig(config);
+    currentExperimentMode = mode;
 }
 
 //==============================================================================

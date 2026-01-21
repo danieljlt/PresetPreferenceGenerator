@@ -29,6 +29,8 @@ public:
      * Online training: update MLP, log to CSV, save weights.
      */
     void sendFeedback(const std::vector<float>& genome, const Feedback& feedback) override;
+    
+    void setConfigFlags(const juce::String& flags) { configFlags = flags; }
 
 private:
     MLP mlp;
@@ -52,6 +54,7 @@ private:
     static constexpr int replayBatchSize = 8;
     
     size_t sampleCount = 0;
+    juce::String configFlags = "baseline";
     
     void loadWeights();
     void saveWeights();

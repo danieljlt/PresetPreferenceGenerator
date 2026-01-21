@@ -43,6 +43,9 @@ private:
     juce::TextButton dislikeButton;
     juce::TextButton skipButton;
     
+    juce::Label experimentLabel;
+    juce::ComboBox experimentModeBox;
+    
     // Helper methods
     void updateGAButtonState();
 
