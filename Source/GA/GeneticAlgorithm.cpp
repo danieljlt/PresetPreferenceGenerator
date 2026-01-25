@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <vector>
 #include <cmath>
+#include <random>
 
 GeneticAlgorithm::GeneticAlgorithm(IFitnessModel& model) 
     : juce::Thread("GeneticAlgorithm"), fitnessModel(model)
@@ -33,30 +34,11 @@ GeneticAlgorithm::~GeneticAlgorithm()
 
 void GeneticAlgorithm::startGA()
 {
-    // Don't start if already running
     if (isThreadRunning()) 
-    {
         return;
-    }
     
-    // Reset pause state
     paused.store(false);
-    pauseEvent.signal(); // Make sure we're not waiting
-    
-    // Initialize population synchronously so first candidate is immediately available
-    if (!populationInitialized)
-    {
-        DBG("Initializing population");
-        initializePopulation(false);
-        
-        if (population && population->size() > 0 && population->hasBest())
-        {
-            Individual& best = population->getBest();
-            parameterBridge->push(best.getParameters(), best.getFitness());
-        }
-    }
-    
-    // Start the thread with normal priority (good for background processing)
+    pauseEvent.signal();
     startThread(juce::Thread::Priority::normal);
 }
 
@@ -197,24 +179,30 @@ float GeneticAlgorithm::computeCombinedFitness(float mlpFitness, float novelty)
 
 void GeneticAlgorithm::run()
 {
-    // Main GA loop - this is called by JUCE's thread system
+    // Initialize population on background thread (prevents UI freeze)
+    if (!populationInitialized)
+    {
+        DBG("Initializing population on background thread");
+        initializePopulation(true);
+        
+        if (population && population->size() > 0 && population->hasBest())
+        {
+            Individual& best = population->getBest();
+            parameterBridge->push(best.getParameters(), best.getFitness());
+        }
+    }
+    
+    // Main GA loop
     while (!threadShouldExit()) 
     {
-        // Handle pause state using JUCE's WaitableEvent
+        // Handle pause state
         if (paused.load()) 
         {
-            pauseEvent.wait(100); // Wait for resume signal or timeout after 100ms
+            pauseEvent.wait(100);
             continue;
         }
         
-        // Check if we should exit after handling pause
         if (threadShouldExit()) 
-        {
-            break;
-        }
-        
-        // Check for exit before starting generation
-        if (threadShouldExit())
             break;
             
         // Generate and evaluate offspring

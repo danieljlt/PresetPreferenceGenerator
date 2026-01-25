@@ -5,7 +5,7 @@
     Author:  Daniel Lister
 
     Single hidden layer neural network for preference learning.
-    Architecture: 17 inputs -> 32 hidden (ReLU) -> 1 output (sigmoid)
+    Runtime-configurable input size for genome (17) or audio features (24).
   ==============================================================================
 */
 
@@ -18,10 +18,10 @@
 class MLP
 {
 public:
-    static constexpr int INPUT_SIZE = 17;
-    static constexpr int HIDDEN_SIZE = 32;
+    explicit MLP(int inputSize = 17, int hiddenSize = 32);
     
-    MLP();
+    int getInputSize() const { return inputSize; }
+    int getHiddenSize() const { return hiddenSize; }
     
     /**
      * Forward pass: predict preference score [0, 1].
@@ -30,7 +30,7 @@ public:
     
     /**
      * Train on a single sample using SGD with binary cross-entropy loss.
-     * @param input The genome (17 floats, normalized [0,1])
+     * @param input The input vector (normalized [0,1])
      * @param target 1.0 for Like, 0.0 for Dislike
      * @param learningRate Step size for weight updates
      * @param sampleWeight Weight for this sample (based on play time)
@@ -43,9 +43,12 @@ public:
     // Returns true if size matches, false otherwise
     bool setWeights(const std::vector<float>& weights);
     
-    static int getWeightCount();
+    int getWeightCount() const;
 
 private:
+    int inputSize;
+    int hiddenSize;
+    
     // Weights and biases
     std::vector<float> weightsIH;  // Input to Hidden
     std::vector<float> biasH;

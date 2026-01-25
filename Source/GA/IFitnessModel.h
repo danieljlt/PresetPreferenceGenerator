@@ -21,6 +21,7 @@ public:
     {
         float rating;          // 0.0 (Dislike) or 1.0 (Like)
         float playTimeSeconds; // Duration user played current preset before feedback
+        float sampleWeight = 1.0f; // Training weight (1.0 = full, 0.5 = edited preset)
     };
 
     /**

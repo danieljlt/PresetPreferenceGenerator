@@ -82,6 +82,14 @@ target_sources(PresetPreferenceGenerator
         Source/GA/MLP.h
         Source/GA/MLPPreferenceModel.cpp
         Source/GA/MLPPreferenceModel.h
+        
+        # Audio Feature Extraction
+        Source/GA/AudioFeatureCache.cpp
+        Source/GA/AudioFeatureCache.h
+        Source/GA/HeadlessSynth.cpp
+        Source/GA/HeadlessSynth.h
+        Source/GA/FeatureExtractor.cpp
+        Source/GA/FeatureExtractor.h
 )
 
 # Link JUCE modules
@@ -116,6 +124,7 @@ add_executable(Tests
     Tests/MLPPreferenceModelTests.cpp
     Tests/GeneticAlgorithmTests.cpp
     Tests/IntegrationTests.cpp
+    Tests/AudioFeatureCacheTests.cpp
     Source/GA/MLP.cpp
     Source/GA/MLPPreferenceModel.cpp
     Source/GA/Individual.cpp
@@ -126,8 +135,11 @@ add_executable(Tests
     Source/GA/SelectionOperators.cpp
     Source/GA/ParameterBridge.cpp
     Source/GA/GeneticAlgorithm.cpp
+    Source/GA/AudioFeatureCache.cpp
+    Source/GA/HeadlessSynth.cpp
+    Source/GA/FeatureExtractor.cpp
+    Source/JX11/Synth.cpp
 )
 
 target_include_directories(Tests PRIVATE ${CMAKE_SOURCE_DIR}/Source)
-target_link_libraries(Tests PRIVATE Catch2::Catch2WithMain juce::juce_core juce::juce_audio_basics)
-
+target_link_libraries(Tests PRIVATE Catch2::Catch2WithMain juce::juce_core juce::juce_audio_basics juce::juce_dsp juce::juce_graphics juce::juce_audio_formats)

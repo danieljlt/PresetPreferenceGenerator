@@ -28,18 +28,28 @@ struct GAConfig
     bool multiObjective = false;
     float noveltyWeight = 0.3f;  // Weight for novelty (1 - noveltyWeight for MLP)
     
+    // MLP input mode: genome parameters or audio features
+    enum class MLPInputMode { Genome, Audio };
+    MLPInputMode mlpInputMode = MLPInputMode::Genome;
+    
     juce::String toString() const
     {
         juce::String result;
-        if (!adaptiveExploration && !noveltyBonus && !multiObjective)
+        
+        if (mlpInputMode == MLPInputMode::Audio)
+            result = "audio";
+        else if (!adaptiveExploration && !noveltyBonus && !multiObjective)
             return "baseline";
         
         if (adaptiveExploration)
-            result += "adaptive";
+            result += (result.isEmpty() ? "" : "+") + juce::String("adaptive");
         if (noveltyBonus)
             result += (result.isEmpty() ? "" : "+") + juce::String("novelty");
         if (multiObjective)
             result += (result.isEmpty() ? "" : "+") + juce::String("multiobjective");
+        
+        if (result.isEmpty())
+            result = "baseline";
         
         return result;
     }

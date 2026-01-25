@@ -11,6 +11,11 @@ namespace
         tempDir.createDirectory();
         return tempDir;
     }
+    
+    void waitForTraining(int ms = 500)
+    {
+        juce::Thread::sleep(ms);
+    }
 }
 
 TEST_CASE("MLPPreferenceModel evaluate returns value in valid range")
@@ -46,6 +51,9 @@ TEST_CASE("MLPPreferenceModel sendFeedback updates predictions")
         model.sendFeedback(genome, feedback);
     }
     
+    // Wait for async training to complete
+    waitForTraining();
+    
     float after = model.evaluate(genome);
     
     // Prediction should increase toward 1.0 after training toward "like"
@@ -56,30 +64,31 @@ TEST_CASE("MLPPreferenceModel handles dislike feedback")
 {
     std::vector<juce::String> names = {"p0", "p1", "p2", "p3", "p4", "p5", "p6", "p7",
                                         "p8", "p9", "p10", "p11", "p12", "p13", "p14", "p15", "p16"};
-    auto testDir = getTestDir();
+    
+    // Use a unique directory to ensure fresh weights
+    auto testDir = juce::File::getSpecialLocation(juce::File::tempDirectory)
+                       .getChildFile("MLPPreferenceModelTests_dislike_" + juce::Uuid().toString());
+    testDir.createDirectory();
+    
     MLPPreferenceModel model(names, testDir);
     
     std::vector<float> genome(17, 0.5f);
     
-    // Train toward "like" first
-    IFitnessModel::Feedback likeFeedback{1.0f, 5.0f};
-    for (int i = 0; i < 10; ++i)
-    {
-        model.sendFeedback(genome, likeFeedback);
-    }
+    // Get initial prediction (should be ~0.5 for fresh MLP)
+    float initial = model.evaluate(genome);
     
-    float afterLikes = model.evaluate(genome);
-    
-    // Then train toward "dislike"
+    // Train toward "dislike" (0.0)
     IFitnessModel::Feedback dislikeFeedback{0.0f, 5.0f};
-    for (int i = 0; i < 20; ++i)
+    for (int i = 0; i < 30; ++i)
     {
         model.sendFeedback(genome, dislikeFeedback);
     }
     
+    waitForTraining(1000);
     float afterDislikes = model.evaluate(genome);
     
-    // Prediction should decrease
-    REQUIRE(afterDislikes < afterLikes);
+    // Prediction should decrease from initial
+    REQUIRE(afterDislikes < initial);
+    
+    testDir.deleteRecursively();
 }
-

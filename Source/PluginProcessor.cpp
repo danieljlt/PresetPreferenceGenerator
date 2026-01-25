@@ -166,6 +166,11 @@ void JX11AudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     DBG("Plugin loaded and DBG active");
     synth.allocateResources(sampleRate, samplesPerBlock);
     parametersChanged.store(true); // Mark for update on next block
+    
+    // Update sample rate for audio feature extraction
+    if (auto* mlpModel = dynamic_cast<MLPPreferenceModel*>(fitnessModel.get()))
+        mlpModel->setSampleRate(sampleRate);
+    
     reset();
 }
 
@@ -865,6 +870,45 @@ void JX11AudioProcessor::setExperimentMode(ExperimentMode mode)
     
     setGAConfig(config);
     currentExperimentMode = mode;
+}
+
+void JX11AudioProcessor::setInputMode(GAConfig::MLPInputMode mode)
+{
+    currentInputMode = mode;
+    
+    // Update MLPPreferenceModel directly
+    if (auto* mlpModel = dynamic_cast<MLPPreferenceModel*>(fitnessModel.get()))
+    {
+        mlpModel->setInputMode(static_cast<MLPPreferenceModel::InputMode>(mode));
+    }
+    
+    // Update config flags in preference model to include input mode
+    GAConfig config;
+    config.mlpInputMode = mode;
+    
+    // Merge with current experiment mode settings
+    switch (currentExperimentMode)
+    {
+        case ExperimentMode::Baseline:
+            break;
+        case ExperimentMode::AdaptiveOnly:
+            config.adaptiveExploration = true;
+            break;
+        case ExperimentMode::NoveltyOnly:
+            config.noveltyBonus = true;
+            config.multiObjective = true;
+            break;
+        case ExperimentMode::AllEnhancements:
+            config.adaptiveExploration = true;
+            config.noveltyBonus = true;
+            config.multiObjective = true;
+            break;
+    }
+    
+    if (auto* mlpModel = dynamic_cast<MLPPreferenceModel*>(fitnessModel.get()))
+    {
+        mlpModel->setConfigFlags(config.toString());
+    }
 }
 
 //==============================================================================

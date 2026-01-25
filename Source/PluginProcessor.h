@@ -159,6 +159,10 @@ public:
     void setGAConfig(const GAConfig& config);
     void setExperimentMode(ExperimentMode mode);
     ExperimentMode getExperimentMode() const { return currentExperimentMode; }
+    
+    // MLP input mode (Genome vs Audio)
+    void setInputMode(GAConfig::MLPInputMode mode);
+    GAConfig::MLPInputMode getInputMode() const { return currentInputMode; }
 
 private:
     // Timer callback - polls parameter bridge and applies smoothed updates
@@ -204,10 +208,11 @@ private:
     std::vector<float> currentParameters;  // Current smoothed values
     bool isInterpolating = false;
     float lastGAFitness = 0.0f;            // Most recent fitness from GA
-    static constexpr float parameterSmoothingTime = 0.4f;  // 400ms to reach target
-    static constexpr float timerInterval = 0.05f;          // 50ms timer rate
+    static constexpr float parameterSmoothingTime = 0.7f;  // 700ms to reach target
+    static constexpr float timerInterval = 0.02f;          // 20ms timer rate (50Hz)
     juce::Time presetLoadTime;             // When current preset was loaded (for play time tracking)
     ExperimentMode currentExperimentMode = ExperimentMode::Baseline;
+    GAConfig::MLPInputMode currentInputMode = GAConfig::MLPInputMode::Genome;
 
     // Apply interpolated parameters to synth
     void interpolateAndApplyParameters();

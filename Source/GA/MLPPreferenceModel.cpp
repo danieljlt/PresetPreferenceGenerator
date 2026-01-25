@@ -11,10 +11,11 @@
 #include <random>
 
 MLPPreferenceModel::MLPPreferenceModel(const std::vector<juce::String>& names,
-                                       const juce::File& baseDirectory)
-    : parameterNames(names)
+                                       const juce::File& baseDirectory,
+                                       double sampleRate)
+    : juce::Thread("MLPTraining")
+    , parameterNames(names)
 {
-    // Use provided directory or fall back to Application Support
     if (baseDirectory.isDirectory())
         baseDir = baseDirectory;
     else
@@ -25,38 +26,108 @@ MLPPreferenceModel::MLPPreferenceModel(const std::vector<juce::String>& names,
     }
     
     datasetFile = baseDir.getChildFile("feedback_dataset.csv");
-    weightsFile = baseDir.getChildFile("mlp_weights.bin");
+    weightsFileGenome = baseDir.getChildFile("mlp_weights_genome.bin");
+    weightsFileAudio = baseDir.getChildFile("mlp_weights_audio.bin");
     
-    // Try to load existing weights, otherwise MLP stays with random init
+    audioFeatureCache = std::make_unique<AudioFeatureCache>(sampleRate);
+    
     loadWeights();
-    
-    // Initialize CSV file
     initCSV();
+    
+    // Start training thread
+    startThread(juce::Thread::Priority::low);
 }
 
 MLPPreferenceModel::~MLPPreferenceModel()
 {
-    // Save weights on destruction as safety net
+    // Stop training thread first, before destroying any members
+    signalThreadShouldExit();
+    queueEvent.signal();
+    stopThread(2000);
+    
+    // Final save
     saveWeights();
 }
 
 float MLPPreferenceModel::evaluate(const std::vector<float>& genome)
 {
     std::lock_guard<std::mutex> lock(mlpMutex);
-    return mlp.predict(genome);
+    
+    float genomePred = mlpGenome.predict(genome);
+    lastGenomePrediction.store(genomePred);
+    
+    auto features = audioFeatureCache->getFeatures(genome);
+    float audioPred = mlpAudio.predict(features);
+    lastAudioPrediction.store(audioPred);
+    
+    return (inputMode == InputMode::Audio) ? audioPred : genomePred;
 }
 
 void MLPPreferenceModel::sendFeedback(const std::vector<float>& genome, const Feedback& feedback)
 {
-    ++sampleCount;
+    size_t index = ++sampleCount;
     
-    float prediction;
+    {
+        std::lock_guard<std::mutex> lock(queueMutex);
+        feedbackQueue.push_back({genome, feedback, index});
+    }
+    queueEvent.signal();
+}
+
+void MLPPreferenceModel::setSampleRate(double newSampleRate)
+{
+    std::lock_guard<std::mutex> lock(mlpMutex);
+    audioFeatureCache->setSampleRate(newSampleRate);
+}
+
+void MLPPreferenceModel::run()
+{
+    while (!threadShouldExit())
+    {
+        queueEvent.wait(100);
+        
+        QueuedFeedback item;
+        bool hasItem = false;
+        
+        {
+            std::lock_guard<std::mutex> lock(queueMutex);
+            if (!feedbackQueue.empty())
+            {
+                item = std::move(feedbackQueue.front());
+                feedbackQueue.pop_front();
+                hasItem = true;
+            }
+        }
+        
+        if (hasItem)
+        {
+            processQueuedFeedback(item);
+        }
+    }
+}
+
+void MLPPreferenceModel::processQueuedFeedback(const QueuedFeedback& item)
+{
+    const auto& genome = item.genome;
+    const auto& feedback = item.feedback;
+    
+    float genomePrediction, audioPrediction;
+    std::vector<float> features;
+    
     {
         std::lock_guard<std::mutex> lock(mlpMutex);
-        prediction = mlp.predict(genome);
+        
+        // Get predictions before training
+        genomePrediction = mlpGenome.predict(genome);
+        features = audioFeatureCache->getFeatures(genome);
+        audioPrediction = mlpAudio.predict(features);
+        
+        // Train both MLPs
+        mlpGenome.train(genome, feedback.rating, learningRate, feedback.sampleWeight);
+        mlpAudio.train(features, feedback.rating, learningRate, feedback.sampleWeight);
     }
     
-    // Add to replay buffer
+    // Add to replay buffer (only accessed by this thread)
     if (replayBuffer.size() < maxBufferSize)
         replayBuffer.push_back({genome, feedback});
     else
@@ -65,70 +136,96 @@ void MLPPreferenceModel::sendFeedback(const std::vector<float>& genome, const Fe
         bufferIndex = (bufferIndex + 1) % maxBufferSize;
     }
     
+    // Replay training
     {
         std::lock_guard<std::mutex> lock(mlpMutex);
-        mlp.train(genome, feedback.rating, learningRate);
         replayTrain();
     }
     
-    saveWeights();
-    appendToCSV(genome, feedback, prediction, sampleCount);
+    // Append to CSV
+    appendToCSV(genome, feedback, genomePrediction, audioPrediction, item.sampleIndex);
+    
+    // Debounced weight saving
+    if (item.sampleIndex - lastSaveCount >= saveDebounceCount)
+    {
+        std::lock_guard<std::mutex> lock(mlpMutex);
+        saveWeights();
+        lastSaveCount = item.sampleIndex;
+    }
 }
 
 void MLPPreferenceModel::loadWeights()
 {
-    if (!weightsFile.existsAsFile())
+    if (weightsFileGenome.existsAsFile())
     {
-        DBG("No weights file found, starting with random initialization");
-        return;
+        juce::FileInputStream stream(weightsFileGenome);
+        if (stream.openedOk())
+        {
+            uint32_t count = 0;
+            stream.read(&count, sizeof(count));
+            
+            if (static_cast<int>(count) == mlpGenome.getWeightCount())
+            {
+                std::vector<float> weights(count);
+                stream.read(weights.data(), count * sizeof(float));
+                if (mlpGenome.setWeights(weights))
+                    DBG("Loaded genome MLP weights");
+            }
+        }
     }
     
-    juce::FileInputStream stream(weightsFile);
-    if (!stream.openedOk())
+    if (weightsFileAudio.existsAsFile())
     {
-        DBG("Failed to open weights file");
-        return;
+        juce::FileInputStream stream(weightsFileAudio);
+        if (stream.openedOk())
+        {
+            uint32_t count = 0;
+            stream.read(&count, sizeof(count));
+            
+            if (static_cast<int>(count) == mlpAudio.getWeightCount())
+            {
+                std::vector<float> weights(count);
+                stream.read(weights.data(), count * sizeof(float));
+                if (mlpAudio.setWeights(weights))
+                    DBG("Loaded audio MLP weights");
+            }
+        }
     }
-    
-    // Read weight count
-    uint32_t count = 0;
-    stream.read(&count, sizeof(count));
-    
-    if (static_cast<int>(count) != MLP::getWeightCount())
-    {
-        DBG("Weight count mismatch, starting fresh");
-        return;
-    }
-    
-    // Read weights
-    std::vector<float> weights(count);
-    stream.read(weights.data(), count * sizeof(float));
-    
-    if (mlp.setWeights(weights))
-        DBG("Loaded MLP weights from " << weightsFile.getFullPathName());
-    else
-        DBG("Failed to set weights, using random initialization");
 }
 
 void MLPPreferenceModel::saveWeights()
 {
-    juce::FileOutputStream stream(weightsFile);
-    if (!stream.openedOk())
     {
-        DBG("Failed to open weights file for writing");
-        return;
+        juce::FileOutputStream stream(weightsFileGenome);
+        if (stream.openedOk())
+        {
+            stream.setPosition(0);
+            stream.truncate();
+            
+            auto weights = mlpGenome.getWeights();
+            uint32_t count = static_cast<uint32_t>(weights.size());
+            
+            stream.write(&count, sizeof(count));
+            stream.write(weights.data(), count * sizeof(float));
+            stream.flush();
+        }
     }
     
-    stream.setPosition(0);
-    stream.truncate();
-    
-    auto weights = mlp.getWeights();
-    uint32_t count = static_cast<uint32_t>(weights.size());
-    
-    stream.write(&count, sizeof(count));
-    stream.write(weights.data(), count * sizeof(float));
-    
-    stream.flush();
+    {
+        juce::FileOutputStream stream(weightsFileAudio);
+        if (stream.openedOk())
+        {
+            stream.setPosition(0);
+            stream.truncate();
+            
+            auto weights = mlpAudio.getWeights();
+            uint32_t count = static_cast<uint32_t>(weights.size());
+            
+            stream.write(&count, sizeof(count));
+            stream.write(weights.data(), count * sizeof(float));
+            stream.flush();
+        }
+    }
 }
 
 void MLPPreferenceModel::initCSV()
@@ -137,21 +234,18 @@ void MLPPreferenceModel::initCSV()
     
     if (datasetFile.existsAsFile())
     {
-        // Check if header matches
         juce::StringArray lines;
         datasetFile.readLines(lines);
         
         if (lines.size() > 0 && lines[0].trim() == getHeaderString().trim())
-            return;  // Schema matches, keep existing file
+            return;
         
-        // Schema mismatch, rotate file
         juce::String timestamp = juce::Time::getCurrentTime().formatted("%Y%m%d_%H%M%S");
         juce::File backupFile = datasetFile.getSiblingFile("feedback_dataset_backup_" + timestamp + ".csv");
         datasetFile.moveFileTo(backupFile);
         DBG("Schema changed. Rotated old dataset to " << backupFile.getFileName());
     }
     
-    // Create new file with header
     datasetFile.create();
     datasetFile.appendText(getHeaderString() + "\n");
 }
@@ -161,12 +255,12 @@ juce::String MLPPreferenceModel::getHeaderString() const
     juce::String header;
     for (const auto& name : parameterNames)
         header += name + ",";
-    header += "rating,playTimeSeconds,sampleIndex,mlpPrediction,configFlags,timestamp";
+    header += "rating,playTimeSeconds,sampleIndex,mlpGenomePrediction,mlpAudioPrediction,configFlags,timestamp,sampleWeight";
     return header;
 }
 
 void MLPPreferenceModel::appendToCSV(const std::vector<float>& genome, const Feedback& feedback,
-                                      float mlpPrediction, size_t sampleIndex)
+                                      float genomePrediction, float audioPrediction, size_t sampleIndex)
 {
     const juce::ScopedLock lock(fileLock);
     
@@ -177,9 +271,11 @@ void MLPPreferenceModel::appendToCSV(const std::vector<float>& genome, const Fee
     line += juce::String(feedback.rating, 1) + ",";
     line += juce::String(feedback.playTimeSeconds, 2) + ",";
     line += juce::String(static_cast<int>(sampleIndex)) + ",";
-    line += juce::String(mlpPrediction, 6) + ",";
+    line += juce::String(genomePrediction, 6) + ",";
+    line += juce::String(audioPrediction, 6) + ",";
     line += configFlags + ",";
-    line += juce::Time::getCurrentTime().toISO8601(true);
+    line += juce::Time::getCurrentTime().toISO8601(true) + ",";
+    line += juce::String(feedback.sampleWeight, 2);
     
     datasetFile.appendText(line + "\n");
 }
@@ -202,6 +298,18 @@ void MLPPreferenceModel::replayTrain()
     for (int i = 0; i < numSamples; ++i)
     {
         const auto& sample = replayBuffer[indices[i]];
-        mlp.train(sample.first, sample.second.rating, learningRate);
+        const auto& genome = sample.first;
+        float rating = sample.second.rating;
+        float weight = sample.second.sampleWeight;
+        
+        mlpGenome.train(genome, rating, learningRate, weight);
+        
+        // Only train audio MLP if features are cached (avoid blocking)
+        if (audioFeatureCache->hasCached(genome))
+        {
+            auto features = audioFeatureCache->getFeatures(genome);
+            mlpAudio.train(features, rating, learningRate, weight);
+        }
     }
 }
+

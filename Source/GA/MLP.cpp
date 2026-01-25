@@ -8,22 +8,24 @@
 
 #include "MLP.h"
 
-MLP::MLP()
-    : weightsIH(INPUT_SIZE * HIDDEN_SIZE)
-    , biasH(HIDDEN_SIZE, 0.0f)
-    , weightsHO(HIDDEN_SIZE)
+MLP::MLP(int inputSize, int hiddenSize)
+    : inputSize(inputSize)
+    , hiddenSize(hiddenSize)
+    , weightsIH(inputSize * hiddenSize)
+    , biasH(hiddenSize, 0.0f)
+    , weightsHO(hiddenSize)
     , biasO(0.0f)
-    , mIH(INPUT_SIZE * HIDDEN_SIZE, 0.0f)
-    , vIH(INPUT_SIZE * HIDDEN_SIZE, 0.0f)
-    , mBiasH(HIDDEN_SIZE, 0.0f)
-    , vBiasH(HIDDEN_SIZE, 0.0f)
-    , mHO(HIDDEN_SIZE, 0.0f)
-    , vHO(HIDDEN_SIZE, 0.0f)
+    , mIH(inputSize * hiddenSize, 0.0f)
+    , vIH(inputSize * hiddenSize, 0.0f)
+    , mBiasH(hiddenSize, 0.0f)
+    , vBiasH(hiddenSize, 0.0f)
+    , mHO(hiddenSize, 0.0f)
+    , vHO(hiddenSize, 0.0f)
     , mBiasO(0.0f)
     , vBiasO(0.0f)
     , timestep(0)
-    , zHidden(HIDDEN_SIZE)
-    , aHidden(HIDDEN_SIZE)
+    , zHidden(hiddenSize)
+    , aHidden(hiddenSize)
     , zOutput(0.0f)
     , aOutput(0.5f)
 {
@@ -36,7 +38,7 @@ void MLP::initializeWeights()
     std::mt19937 gen(rd());
     
     // Xavier initialization for input->hidden
-    float scaleIH = std::sqrt(2.0f / (INPUT_SIZE + HIDDEN_SIZE));
+    float scaleIH = std::sqrt(2.0f / (inputSize + hiddenSize));
     std::uniform_real_distribution<float> distIH(-scaleIH, scaleIH);
     for (float& w : weightsIH)
         w = distIH(gen);
@@ -54,11 +56,11 @@ void MLP::initializeWeights()
 float MLP::predict(const std::vector<float>& input)
 {
     // Input -> Hidden (with ReLU)
-    for (int j = 0; j < HIDDEN_SIZE; ++j)
+    for (int j = 0; j < hiddenSize; ++j)
     {
         float sum = biasH[j];
-        for (int i = 0; i < INPUT_SIZE; ++i)
-            sum += input[i] * weightsIH[i * HIDDEN_SIZE + j];
+        for (int i = 0; i < inputSize; ++i)
+            sum += input[i] * weightsIH[i * hiddenSize + j];
         
         zHidden[j] = sum;
         aHidden[j] = relu(sum);
@@ -66,7 +68,7 @@ float MLP::predict(const std::vector<float>& input)
     
     // Hidden -> Output (with sigmoid)
     float sum = biasO;
-    for (int j = 0; j < HIDDEN_SIZE; ++j)
+    for (int j = 0; j < hiddenSize; ++j)
         sum += aHidden[j] * weightsHO[j];
     
     zOutput = sum;
@@ -93,15 +95,15 @@ void MLP::train(const std::vector<float>& input, float target,
     float bc2 = 1.0f - std::pow(beta2, timestep);
     
     // Backprop to hidden layer (compute before updating weightsHO)
-    std::vector<float> dHidden(HIDDEN_SIZE);
-    for (int j = 0; j < HIDDEN_SIZE; ++j)
+    std::vector<float> dHidden(hiddenSize);
+    for (int j = 0; j < hiddenSize; ++j)
     {
         float reluGrad = (zHidden[j] > 0.0f) ? 1.0f : 0.0f;
         dHidden[j] = dOutput * weightsHO[j] * reluGrad;
     }
     
     // Update hidden to output weights with Adam
-    for (int j = 0; j < HIDDEN_SIZE; ++j)
+    for (int j = 0; j < hiddenSize; ++j)
     {
         float grad = dOutput * aHidden[j];
         mHO[j] = beta1 * mHO[j] + (1.0f - beta1) * grad;
@@ -119,11 +121,11 @@ void MLP::train(const std::vector<float>& input, float target,
     biasO -= learningRate * mHatBiasO / (std::sqrt(vHatBiasO) + epsilon);
     
     // Update input to hidden weights with Adam
-    for (int j = 0; j < HIDDEN_SIZE; ++j)
+    for (int j = 0; j < hiddenSize; ++j)
     {
-        for (int i = 0; i < INPUT_SIZE; ++i)
+        for (int i = 0; i < inputSize; ++i)
         {
-            int idx = i * HIDDEN_SIZE + j;
+            int idx = i * hiddenSize + j;
             float grad = dHidden[j] * input[i];
             mIH[idx] = beta1 * mIH[idx] + (1.0f - beta1) * grad;
             vIH[idx] = beta2 * vIH[idx] + (1.0f - beta2) * grad * grad;
@@ -141,11 +143,11 @@ void MLP::train(const std::vector<float>& input, float target,
     }
 }
 
-int MLP::getWeightCount()
+int MLP::getWeightCount() const
 {
     // Weights + biases + Adam moments (m and v for each) + timestep
-    int baseCount = (INPUT_SIZE * HIDDEN_SIZE) + HIDDEN_SIZE + HIDDEN_SIZE + 1;
-    int adamCount = 2 * ((INPUT_SIZE * HIDDEN_SIZE) + HIDDEN_SIZE + HIDDEN_SIZE + 1);
+    int baseCount = (inputSize * hiddenSize) + hiddenSize + hiddenSize + 1;
+    int adamCount = 2 * ((inputSize * hiddenSize) + hiddenSize + hiddenSize + 1);
     return baseCount + adamCount + 1;
 }
 
@@ -183,37 +185,37 @@ bool MLP::setWeights(const std::vector<float>& weights)
     
     int idx = 0;
     
-    for (int i = 0; i < INPUT_SIZE * HIDDEN_SIZE; ++i)
+    for (int i = 0; i < inputSize * hiddenSize; ++i)
         weightsIH[i] = weights[idx++];
     
-    for (int j = 0; j < HIDDEN_SIZE; ++j)
+    for (int j = 0; j < hiddenSize; ++j)
         biasH[j] = weights[idx++];
     
-    for (int j = 0; j < HIDDEN_SIZE; ++j)
+    for (int j = 0; j < hiddenSize; ++j)
         weightsHO[j] = weights[idx++];
     
     biasO = weights[idx++];
     
     // Adam first moments
-    for (int i = 0; i < INPUT_SIZE * HIDDEN_SIZE; ++i)
+    for (int i = 0; i < inputSize * hiddenSize; ++i)
         mIH[i] = weights[idx++];
     
-    for (int j = 0; j < HIDDEN_SIZE; ++j)
+    for (int j = 0; j < hiddenSize; ++j)
         mBiasH[j] = weights[idx++];
     
-    for (int j = 0; j < HIDDEN_SIZE; ++j)
+    for (int j = 0; j < hiddenSize; ++j)
         mHO[j] = weights[idx++];
     
     mBiasO = weights[idx++];
     
     // Adam second moments
-    for (int i = 0; i < INPUT_SIZE * HIDDEN_SIZE; ++i)
+    for (int i = 0; i < inputSize * hiddenSize; ++i)
         vIH[i] = weights[idx++];
     
-    for (int j = 0; j < HIDDEN_SIZE; ++j)
+    for (int j = 0; j < hiddenSize; ++j)
         vBiasH[j] = weights[idx++];
     
-    for (int j = 0; j < HIDDEN_SIZE; ++j)
+    for (int j = 0; j < hiddenSize; ++j)
         vHO[j] = weights[idx++];
     
     vBiasO = weights[idx++];

@@ -99,7 +99,6 @@ JX11AudioProcessorEditor::JX11AudioProcessorEditor (JX11AudioProcessor& p)
     experimentModeBox.addItem("Adaptive Only", 2);
     experimentModeBox.addItem("Novelty Only", 3);
     experimentModeBox.addItem("All Enhancements", 4);
-    // Initialize from processor state
     experimentModeBox.setSelectedId(static_cast<int>(audioProcessor.getExperimentMode()) + 1, juce::dontSendNotification);
     experimentModeBox.onChange = [this]()
     {
@@ -107,6 +106,20 @@ JX11AudioProcessorEditor::JX11AudioProcessorEditor (JX11AudioProcessor& p)
         audioProcessor.setExperimentMode(static_cast<ExperimentMode>(id - 1));
     };
     gaTab.addAndMakeVisible(experimentModeBox);
+    
+    // Input mode selector (Genome vs Audio features)
+    inputModeLabel.setText("Input Mode:", juce::dontSendNotification);
+    gaTab.addAndMakeVisible(inputModeLabel);
+    
+    inputModeBox.addItem("Genome", 1);
+    inputModeBox.addItem("Audio", 2);
+    inputModeBox.setSelectedId(static_cast<int>(audioProcessor.getInputMode()) + 1, juce::dontSendNotification);
+    inputModeBox.onChange = [this]()
+    {
+        int id = inputModeBox.getSelectedId();
+        audioProcessor.setInputMode(static_cast<GAConfig::MLPInputMode>(id - 1));
+    };
+    gaTab.addAndMakeVisible(inputModeBox);
     
     // Add tabs
     tabbedComponent.addTab("Synth Controls", juce::Colours::lightgrey, &genericEditor, false);
@@ -170,6 +183,12 @@ void JX11AudioProcessorEditor::resized()
     auto modeArea = gaBounds.removeFromTop(30);
     experimentLabel.setBounds(modeArea.removeFromLeft(150));
     experimentModeBox.setBounds(modeArea.reduced(5, 0));
+    
+    // Input mode selector
+    gaBounds.removeFromTop(10);
+    auto inputModeArea = gaBounds.removeFromTop(30);
+    inputModeLabel.setBounds(inputModeArea.removeFromLeft(150));
+    inputModeBox.setBounds(inputModeArea.reduced(5, 0));
 }
 
 void JX11AudioProcessorEditor::timerCallback()

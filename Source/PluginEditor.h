@@ -46,6 +46,9 @@ private:
     juce::Label experimentLabel;
     juce::ComboBox experimentModeBox;
     
+    juce::Label inputModeLabel;
+    juce::ComboBox inputModeBox;
+    
     // Helper methods
     void updateGAButtonState();
 
