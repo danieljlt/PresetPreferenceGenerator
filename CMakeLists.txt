@@ -45,6 +45,14 @@ target_sources(PresetPreferenceGenerator
         Source/PluginProcessor.h
         Source/PluginEditor.cpp
         Source/PluginEditor.h
+
+        # UI components
+        Source/UI/PPGLookAndFeel.h
+        Source/UI/PPGLookAndFeel.cpp
+        Source/UI/SynthControlsPanel.h
+        Source/UI/SynthControlsPanel.cpp
+        Source/UI/GAControlsPanel.h
+        Source/UI/GAControlsPanel.cpp
         
         # JX11 synthesizer files
         Source/JX11/Synth.cpp
